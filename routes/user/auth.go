@@ -295,11 +295,13 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
+	fmt.Println("2 UPORT ID: ")
 	if c.HasError() {
 		c.HTML(200, SIGNUP)
 		return
 	}
 
+	fmt.Println("3 UPORT ID: ")
 	if setting.Service.EnableCaptcha && !cpt.VerifyReq(c.Req) {
 		c.Data["Err_Captcha"] = true
 		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f)
@@ -313,13 +315,16 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	}
 
 	u := &models.User{
+		UportId:  f.UportId,
 		Name:     f.UserName,
 		Email:    f.Email,
 		Passwd:   f.Password,
 		IsActive: !setting.Service.RegisterEmailConfirm,
 	}
+
 	if err := models.CreateUser(u); err != nil {
 		switch {
+		// TODO: the uport id is already exist
 		case models.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
 			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f)
