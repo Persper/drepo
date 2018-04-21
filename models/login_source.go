@@ -733,7 +733,6 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 		if loginSourceID >= 0 && user.LoginSource != loginSourceID {
 			return nil, errors.LoginSourceMismatch{loginSourceID, user.LoginSource}
 		}
-
 		// Validate password hash fetched from database for local accounts
 		if user.LoginType == LOGIN_NOTYPE ||
 			user.LoginType == LOGIN_PLAIN {
@@ -743,13 +742,11 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 
 			return nil, errors.UserNotExist{user.ID, user.Name}
 		}
-
 		// Remote login to the login source the user is associated with
 		source, err := GetLoginSourceByID(user.LoginSource)
 		if err != nil {
 			return nil, err
 		}
-
 		return remoteUserLogin(user, user.LoginName, password, source, false)
 	}
 
@@ -764,4 +761,57 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 	}
 
 	return remoteUserLogin(nil, username, password, source, true)
+}
+
+// UserLogin validates user uport_id via given uport id.
+func UserLoginUportId(uportid string, loginSourceID int64) (*User, error) {
+	var user *User
+	user = &User{UportId: uportid}
+
+	hasUser, err := x.Get(user)
+	if err != nil {
+		return nil, fmt.Errorf("get user record: %v", err)
+	}
+
+	if hasUser {
+		// Note: This check is unnecessary but to reduce user confusion at login page
+		// and make it more consistent at user's perspective.
+		if loginSourceID >= 0 && user.LoginSource != loginSourceID {
+			return nil, errors.LoginSourceMismatch{loginSourceID, user.LoginSource}
+		}
+		// Validate password hash fetched from database for local accounts
+		if user.LoginType == LOGIN_NOTYPE ||
+			user.LoginType == LOGIN_PLAIN {
+			/*if user.ValidatePassword(password) {
+				return user, nil
+			}
+			return nil, errors.UserNotExist{user.ID, user.Name}*/
+			return user, nil
+		}
+		// Remote login to the login source the user is associated with
+		//source, err := GetLoginSourceByID(user.LoginSource)
+		_, err := GetLoginSourceByID(user.LoginSource)
+		if err != nil {
+			return nil, err
+		}
+		//return remoteUserLogin(user, user.LoginName, password, source, false)
+
+		// TODO
+		return nil, nil
+	}
+
+	// Non-local login source is always greater than 0
+	/*if loginSourceID <= 0 {
+		return nil, errors.UserNotExist{-1, username}
+	}
+
+	source, err := GetLoginSourceByID(loginSourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return remoteUserLogin(nil, username, password, source, true)*/
+
+	// TODO
+	return nil, nil
 }

@@ -19,9 +19,9 @@
         </h3>
         <div class="ui attached segment">
           {{template "base/alert" .}}
-          <div class="required inline field {{if .Err_UserName}}error{{end}}">
-            <label for="user_name">{{.i18n.Tr "home.uname_holder"}}</label>
-            <input id="user_name" name="user_name" value="{{.user_name}}" autofocus required>
+          <div class="required inline field {{if .Err_UportId}}error{{end}}">
+            <label for="uport_id">{{.i18n.Tr "uportid"}}</label>
+            <input id="uport_id" name="uport_id" value="{{.uport_id}}" autofocus required>
           </div>
           <div class="inline field">
             <label></label>
@@ -55,10 +55,7 @@
 </div>
 
 <body>
-
   <script>
-    // State and render functions
-
     const $ = (selector) => document.querySelector(selector)
     let globalState = {
       uportId: "",
@@ -71,30 +68,9 @@
       sendToAddr: "",
       sendToVal: ""
     }
-
     const render = function () {
-      $('#user_name').value = globalState.uportId;
-      $('#password').value = globalState.ethAddress;
-      $('#ethBalance').innerHTML = globalState.ethBalance;
-      $('#txHashSentEth').innerHTML = globalState.txHashSentEth;
-      $('#txHashSetStatus').innerHTML = globalState.txHashSetStatus;
-      $('#sendTo').value = globalState.sendToAddr;
-      $('#amount').value = globalState.sendToVal;
-      $('#currentStatus').innerHTML = globalState.currentStatus;
+      $('#uport_id').value = globalState.uportId;
     }
-
-    const updateState = function () {
-      globalState.sendToAddr = $('#sendTo').value;
-      globalState.sendToVal = $('#amount').value;
-      globalState.statusInput = $('#statusInput').value;
-      console.log(globalState)
-    }
-
-      ////////////////////////////////////////////////
-
-
-      ////////////////////////////////////////////////
-
   </script>
   <script type="text/javascript" src="{{AppSubURL}}/uport_tutorial.js"></script>
 </body>
