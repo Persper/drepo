@@ -17,3 +17,8 @@ output*
 *.sublime-project
 *.sublime-workspace
 /release
+
+public/js/uport-connect/
+public/js/uport*
+vendor/github.com/gogits/git-module*
+vendor/github.com/gogits/git-module/*

@@ -150,6 +150,7 @@ type Repository struct {
 	Website       string
 	DefaultBranch string
 	Size          int64 `xorm:"NOT NULL DEFAULT 0"`
+	IPFSHash      string
 
 	NumWatches          int
 	NumStars            int
