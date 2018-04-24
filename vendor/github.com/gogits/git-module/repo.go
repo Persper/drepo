@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -73,6 +74,27 @@ func InitRepository(repoPath string, bare bool) error {
 		cmd.AddArguments("--bare")
 	}
 	_, err := cmd.RunInDir(repoPath)
+
+	if err == nil {
+		ipfs_cmd := NewCommand("remote")
+		ipfs_cmd.AddArguments("add", "origin", "ipfs::")
+		ipfs_result, ipfs_err := ipfs_cmd.RunInDir(repoPath)
+		if ipfs_err == nil {
+			fmt.Println(ipfs_result)
+		} else {
+			fmt.Println(ipfs_err)
+		}
+
+		ipfs_cmd = NewCommand("push")
+		ipfs_cmd.AddArguments("-u", "origin", "master")
+		ipfs_result, ipfs_err = ipfs_cmd.RunInDir(repoPath)
+		if ipfs_err == nil {
+			fmt.Println(ipfs_result)
+		} else {
+			fmt.Println(ipfs_err)
+		}
+	}
+
 	return err
 }
 
