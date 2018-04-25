@@ -23,25 +23,33 @@
 						<p>{{.i18n.Tr "auth.disable_register_prompt"}}</p>
 					{{else}}
 						<div class="required inline field {{if .Err_UportId}}error{{end}}">
-							<label for="uport_id">{{.i18n.Tr "uportid"}}</label>
+							<label for="uport_id">{{.i18n.Tr "UportId"}}</label>
 							<input id="uport_id" name="uport_id" value="{{.uport_id}}" autofocus required>
 						</div>
 						<div class="required inline field {{if .Err_UserName}}error{{end}}">
-							<label for="user_name">{{.i18n.Tr "username"}}</label>
+							<label for="user_name">{{.i18n.Tr "UserName"}}</label>
 							<input id="user_name" name="user_name" value="{{.user_name}}" autofocus required>
 						</div>
 						<div class="required inline field {{if .Err_Email}}error{{end}}">
-							<label for="email">{{.i18n.Tr "email"}}</label>
+							<label for="email">{{.i18n.Tr "Email"}}</label>
 							<input id="email" name="email" type="email" value="{{.email}}" required>
 						</div>
+						<div class="required inline field {{if .Err_Country}}error{{end}}">
+            				<label for="country">{{.i18n.Tr "Country"}}</label>
+            				<input id="country" name="country" value=".country" autofocus required>
+          				</div>
 						<div class="required inline field {{if .Err_Password}}error{{end}}">
-							<label for="password">{{.i18n.Tr "password"}}</label>
+							<label for="password">{{.i18n.Tr "Password"}}</label>
 							<input id="password" name="password" type="password" value="{{.password}}" required>
 						</div>
 						<div class="required inline field {{if .Err_Password}}error{{end}}">
-							<label for="retype">{{.i18n.Tr "re_type"}}</label>
+							<label for="retype">{{.i18n.Tr "Re_Type"}}</label>
 							<input id="retype" name="retype" type="password" value="{{.retype}}" required>
 						</div>
+        				<div class="inline field">
+          					<label></label>
+          					<button class="ui green button"  id="connectUportBtn" onclick="uportConnect()">Connect uPort</button>
+      					</div>
 						{{if .EnableCaptcha}}
 							<div class="inline field">
 								<label></label>
@@ -64,12 +72,6 @@
 					{{end}}
 				</div>
 			</form>
-			<div class="ui form">
-        		<div class="inline field">
-          			<label></label>
-          			<button class="ui green button"  id="connectUportBtn" onclick="uportConnect()">Connect uPort</button>
-        		</div>
-      		</div>
 		</div>
 	</div>
 </div>
@@ -90,8 +92,11 @@
     }
     const render = function () {
       $('#uport_id').value = globalState.uportId;
+      $('#user_name').value = globalState.userName;
+      $('#email').value = globalState.email;
+      $('#country').value = globalState.country;
     }
   </script>
-  <script type="text/javascript" src="{{AppSubURL}}/js/uport_tutorial.js"></script>
+  <script type="text/javascript" src="{{AppSubURL}}/js/uport-connect/uport_tutorial.js"></script>
 </body>
 {{template "base/footer" .}}

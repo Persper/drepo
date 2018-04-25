@@ -20,8 +20,20 @@
         <div class="ui attached segment">
           {{template "base/alert" .}}
           <div class="required inline field {{if .Err_UportId}}error{{end}}">
-            <label for="uport_id">{{.i18n.Tr "uportid"}}</label>
+            <label for="uport_id">{{.i18n.Tr "UportId"}}</label>
             <input id="uport_id" name="uport_id" value="{{.uport_id}}" autofocus required>
+          </div>
+          <div class="required inline field {{if .Err_UserName}}error{{end}}">
+            <label for="user_name">{{.i18n.Tr "UserName"}}</label>
+            <input id="user_name" name="user_name" value="{{.user_name}}" autofocus required>
+          </div>
+          <div class="required inline field {{if .Err_Email}}error{{end}}">
+              <label for="email">{{.i18n.Tr "Email"}}</label>
+              <input id="email" name="email" type="email" value="{{.email}}" autofocus required>
+          </div>
+          <div class="required inline field {{if .Err_Country}}error{{end}}">
+            <label for="country">{{.i18n.Tr "Country"}}</label>
+            <input id="country" name="country" value="{{.country}}" autofocus required>
           </div>
           <div class="inline field">
             <label></label>
@@ -30,10 +42,9 @@
               <input name="remember" type="checkbox">
             </div>
           </div>
-
           <div class="inline field">
             <label></label>
-            <button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
+            <button class="ui green button" id="connectUportBtn" onclick="uportConnect()">{{.i18n.Tr "sign_in"}}</button>
             <a href="{{AppSubURL}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
           </div>
           {{if .ShowRegistrationButton}}
@@ -44,12 +55,6 @@
           {{end}}
         </div>
       </form>
-      <div class="ui form">
-        <div class="inline field">
-          <label></label>
-          <button class="ui green button"  id="connectUportBtn" onclick="uportConnect()">Connect uPort</button>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -59,8 +64,11 @@
     const $ = (selector) => document.querySelector(selector)
     let globalState = {
       uportId: "",
+      userName: "",
+      country: "",
       ethAddress: "",
       ethBalance: "",
+      avatar: "",
       currentStatus: "",
       statusInput: "",
       txHashSentEth: "",
@@ -70,9 +78,12 @@
     }
     const render = function () {
       $('#uport_id').value = globalState.uportId;
+      $('#user_name').value = globalState.userName;
+      $('#email').value = globalState.email;
+      $('#country').value = globalState.country;
     }
   </script>
-  <script type="text/javascript" src="{{AppSubURL}}/js/uport_tutorial.js"></script>
+  <script type="text/javascript" src="{{AppSubURL}}/js/uport-connect/uport_tutorial.js"></script>
 </body>
 
 {{template "base/footer" .}}
