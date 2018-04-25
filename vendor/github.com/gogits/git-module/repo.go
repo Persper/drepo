@@ -85,14 +85,15 @@ func InitRepository(repoPath string, bare bool) error {
 			fmt.Println(ipfs_err)
 		}
 
-		ipfs_cmd = NewCommand("push")
+		/* Empty repo can not be pushed to the remote repo. */
+		/*ipfs_cmd = NewCommand("push")
 		ipfs_cmd.AddArguments("-u", "origin", "master")
 		ipfs_result, ipfs_err = ipfs_cmd.RunInDir(repoPath)
 		if ipfs_err == nil {
 			fmt.Println(ipfs_result)
 		} else {
 			fmt.Println(ipfs_err)
-		}
+		}*/
 	}
 
 	return err

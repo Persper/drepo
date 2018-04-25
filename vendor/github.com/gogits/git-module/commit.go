@@ -135,6 +135,7 @@ func CommitChanges(repoPath string, opts CommitChangesOptions) error {
 	if err != nil && err.Error() == "exit status 1" {
 		return nil
 	}
+
 	return err
 }
 
