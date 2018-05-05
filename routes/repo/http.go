@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -303,6 +304,7 @@ func serviceRPC(h serviceHandler, service string) {
 	}
 
 	if service == "receive-pack" {
+		/* receive-pack */
 		paths := strings.Split(h.dir, "/")
 		parent_path := strings.TrimSuffix(h.dir, paths[len(paths)-1])
 		//fmt.Println(h.dir, parent_path)
@@ -322,13 +324,16 @@ func serviceRPC(h serviceHandler, service string) {
 		// Push to IPFS
 		cmd = exec.Command("git", "push", "ipfs_repo", "master")
 		cmd.Dir = parent_path
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stdout
-		err = cmd.Run()
-		if err != nil {
-			fmt.Println(err)
+		out, ipfs_err := cmd.CombinedOutput()
+		out_str := string(out)
+		var ipfs_hash string
+		if ipfs_err != nil {
+			fmt.Println(ipfs_err)
 		} else {
-			fmt.Println("Push to IPFS: push OK.")
+			fmt.Println(out_str)
+			id := strings.Index(out_str, "to IPFS as")
+			ipfs_hash = out_str[id+16 : id+62]
+			fmt.Println("Push to IPFS: " + ipfs_hash)
 		}
 
 		// Transform .git to sample.git
@@ -337,9 +342,18 @@ func serviceRPC(h serviceHandler, service string) {
 		err = cmd.Run()
 		if err != nil {
 			fmt.Println("Push to IPFS: the second mv fails")
-		} else {
-			fmt.Println("Push to IPFS: successful!")
 		}
+
+		// Record the ipfs_hash
+		txt_path := h.dir + "/ipfs_hash"
+		//fmt.Println("output path: " + txt_path)
+		err = ioutil.WriteFile(txt_path, []byte(ipfs_hash), 0666)
+		if err != nil {
+			fmt.Println("Push to IPFS: record ipfs_hash fails")
+		}
+	} else {
+		/* upload-pack */
+		// TODO
 	}
 }
 
