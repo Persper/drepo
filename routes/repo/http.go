@@ -56,6 +56,7 @@ func askCredentials(c *context.Context, status int, text string) {
 
 func HTTPContexter() macaron.Handler {
 	return func(c *context.Context) {
+
 		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
 			c.Resp.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
@@ -118,12 +119,15 @@ func HTTPContexter() macaron.Handler {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
+
+		// Get the login authUsername and authPassword
 		authUsername, authPassword, err := tool.BasicAuthDecode(auths[1])
 		if err != nil {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
 
+		// Login via model in database
 		authUser, err := models.UserLogin(authUsername, authPassword, -1)
 		if err != nil && !errors.IsUserNotExist(err) {
 			c.Handle(http.StatusInternalServerError, "UserLogin", err)
@@ -296,6 +300,16 @@ func serviceRPC(h serviceHandler, service string) {
 		log.Error(2, "HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr)
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	if service == "receive-pack" {
+		ipfs_cmd := exec.Command("git", "push", "ipfs_repo master")
+		ipfs_cmd.Dir = h.dir
+		err = ipfs_cmd.Output()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("SUCCESS - IPFS")
 	}
 }
 
