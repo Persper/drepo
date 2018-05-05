@@ -303,13 +303,43 @@ func serviceRPC(h serviceHandler, service string) {
 	}
 
 	if service == "receive-pack" {
-		ipfs_cmd := exec.Command("git", "push", "ipfs_repo master")
-		ipfs_cmd.Dir = h.dir
-		err = ipfs_cmd.Output()
+		paths := strings.Split(h.dir, "/")
+		parent_path := strings.TrimSuffix(h.dir, paths[len(paths)-1])
+		//fmt.Println(h.dir, parent_path)
+		repo_name := strings.Split(paths[len(paths)-1], ".")
+		//fmt.Println(repo_name[0], repo_name[1])
+		tmp_name := "." + repo_name[1]
+
+		// Transform sample.git to .git
+		cmd = exec.Command("mv", paths[len(paths)-1], tmp_name)
+		cmd.Dir = parent_path
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println("Push to IPFS: mv fails")
+			return
+		}
+
+		// Push to IPFS
+		cmd = exec.Command("git", "push", "ipfs_repo", "master")
+		cmd.Dir = parent_path
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stdout
+		err = cmd.Run()
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Println("SUCCESS - IPFS")
+			fmt.Println("Push to IPFS: push OK.")
+		}
+
+		// Transform .git to sample.git
+		cmd = exec.Command("mv", tmp_name, paths[len(paths)-1])
+		cmd.Dir = parent_path
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println("Push to IPFS: the second mv fails")
+		} else {
+			fmt.Println("Push to IPFS: successful!")
+		}
 	}
 }
 
