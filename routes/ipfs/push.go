@@ -15,7 +15,7 @@ import (
 func Push_to_IPFS(path string) {
 	paths := strings.Split(path, "/")
 	parent_path := strings.TrimSuffix(path, paths[len(paths)-1])
-	//fmt.Println(h.dir, parent_path)
+	//fmt.Println(path, parent_path)
 	repo_name := strings.Split(paths[len(paths)-1], ".")
 	//fmt.Println(repo_name[0], repo_name[1])
 	tmp_name := "." + repo_name[1]
@@ -30,7 +30,7 @@ func Push_to_IPFS(path string) {
 	}
 
 	// Push to IPFS
-	cmd = exec.Command("git", "push", "ipfs_repo", "master")
+	cmd = exec.Command("git", "push", "ipfs::", "master") //the remote "ipfs_repo" only in newly generated repo, not in fork repo
 	cmd.Dir = parent_path
 	out, ipfs_err := cmd.CombinedOutput()
 	out_str := string(out)

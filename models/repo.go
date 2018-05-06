@@ -32,6 +32,7 @@ import (
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/sync"
+	"github.com/gogits/gogs/routes/ipfs"
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
@@ -2311,6 +2312,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	/* Push to IPFS */
+	ipfs.Push_to_IPFS(repoPath)
 
 	_, stderr, err = process.ExecDir(-1,
 		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),
