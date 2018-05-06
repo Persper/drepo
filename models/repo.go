@@ -747,9 +747,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		}
 
 		/* Push the repo to IPFS When this repo is not bare */
-		if service == "receive-pack" {
-			ipfs.Push_to_IPFS(h.dir)
-		}
+		ipfs.Push_to_IPFS(repoPath)
 	}
 
 	if opts.IsMirror {

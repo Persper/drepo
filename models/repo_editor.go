@@ -24,6 +24,7 @@ import (
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/routes/ipfs"
 )
 
 // ___________    .___.__  __    ___________.__.__
@@ -182,6 +183,10 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		log.Error(2, "CommitRepoAction: %v", err)
 		return nil
 	}
+
+	/* Push the repo to IPFS When this repo is not bare */
+	fmt.Println("update: " + repoPath)
+	ipfs.Push_to_IPFS(repoPath)
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return nil
