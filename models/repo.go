@@ -745,6 +745,11 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		if err = repo.UpdateSize(); err != nil {
 			log.Error(2, "UpdateSize [repo_id: %d]: %v", repo.ID, err)
 		}
+
+		/* Push the repo to IPFS When this repo is not bare */
+		if service == "receive-pack" {
+			ipfs.Push_to_IPFS(h.dir)
+		}
 	}
 
 	if opts.IsMirror {
