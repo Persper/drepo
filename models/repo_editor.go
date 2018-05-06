@@ -185,7 +185,6 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	}
 
 	/* Push the repo to IPFS When this repo is not bare */
-	fmt.Println("update: " + repoPath)
 	ipfs.Push_to_IPFS(repoPath)
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
@@ -314,6 +313,9 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		log.Error(2, "CommitRepoAction: %v", err)
 		return nil
 	}
+
+	/* Push the repo to IPFS */
+	ipfs.Push_to_IPFS(repo.RepoPath())
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return nil
@@ -539,6 +541,9 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		log.Error(2, "CommitRepoAction: %v", err)
 		return nil
 	}
+
+	/* Push the repo to IPFS */
+	ipfs.Push_to_IPFS(repo.RepoPath())
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return DeleteUploads(uploads...)
