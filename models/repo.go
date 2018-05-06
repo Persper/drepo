@@ -957,6 +957,9 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		if err = initRepoCommit(tmpDir, doer.NewGitSig()); err != nil {
 			return fmt.Errorf("initRepoCommit: %v", err)
 		}
+
+		/* Need to push to ipfs when this repo support AutoInit */
+		ipfs.Push_to_IPFS(repoPath)
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
