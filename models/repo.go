@@ -1068,7 +1068,6 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, fmt.Errorf("initRepository: %v", err)
 		}
-
 		_, stderr, err := process.ExecDir(-1,
 			repoPath, fmt.Sprintf("CreateRepository 'git update-server-info': %s", repoPath),
 			"git", "update-server-info")
@@ -2303,12 +2302,15 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	repoPath := repo.repoPath(sess)
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
 
+	/* Git clone from old_path to new_repo_path. */
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("ForkRepository 'git clone': %s/%s", owner.Name, repo.Name),
 		"git", "clone", "--bare", baseRepo.RepoPath(), repoPath)
 	if err != nil {
 		return nil, fmt.Errorf("git clone: %v", stderr)
 	}
+
+	/* Push to IPFS */
 
 	_, stderr, err = process.ExecDir(-1,
 		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),

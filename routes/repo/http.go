@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -27,6 +26,7 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/tool"
+	"github.com/gogits/gogs/routes/ipfs"
 )
 
 const (
@@ -281,6 +281,11 @@ func serviceRPC(h serviceHandler, service string) {
 		}
 	}
 
+	/* Support to pull from the IPFS. */
+	if service == "upload-pack" {
+		// TODO
+	}
+
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	if service == "receive-pack" {
@@ -303,57 +308,9 @@ func serviceRPC(h serviceHandler, service string) {
 		return
 	}
 
+	/* Push the repo to IPFS When issuing receive-pack for git push */
 	if service == "receive-pack" {
-		/* receive-pack */
-		paths := strings.Split(h.dir, "/")
-		parent_path := strings.TrimSuffix(h.dir, paths[len(paths)-1])
-		//fmt.Println(h.dir, parent_path)
-		repo_name := strings.Split(paths[len(paths)-1], ".")
-		//fmt.Println(repo_name[0], repo_name[1])
-		tmp_name := "." + repo_name[1]
-
-		// Transform sample.git to .git
-		cmd = exec.Command("mv", paths[len(paths)-1], tmp_name)
-		cmd.Dir = parent_path
-		err = cmd.Run()
-		if err != nil {
-			fmt.Println("Push to IPFS: mv fails")
-			return
-		}
-
-		// Push to IPFS
-		cmd = exec.Command("git", "push", "ipfs_repo", "master")
-		cmd.Dir = parent_path
-		out, ipfs_err := cmd.CombinedOutput()
-		out_str := string(out)
-		var ipfs_hash string
-		if ipfs_err != nil {
-			fmt.Println(ipfs_err)
-		} else {
-			fmt.Println(out_str)
-			id := strings.Index(out_str, "to IPFS as")
-			ipfs_hash = out_str[id+16 : id+62]
-			fmt.Println("Push to IPFS: " + ipfs_hash)
-		}
-
-		// Transform .git to sample.git
-		cmd = exec.Command("mv", tmp_name, paths[len(paths)-1])
-		cmd.Dir = parent_path
-		err = cmd.Run()
-		if err != nil {
-			fmt.Println("Push to IPFS: the second mv fails")
-		}
-
-		// Record the ipfs_hash
-		txt_path := h.dir + "/ipfs_hash"
-		//fmt.Println("output path: " + txt_path)
-		err = ioutil.WriteFile(txt_path, []byte(ipfs_hash), 0666)
-		if err != nil {
-			fmt.Println("Push to IPFS: record ipfs_hash fails")
-		}
-	} else {
-		/* upload-pack */
-		// TODO
+		ipfs.Push_to_IPFS(h.dir)
 	}
 }
 
