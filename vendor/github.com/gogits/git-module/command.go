@@ -63,8 +63,8 @@ func (c *Command) RunInDirTimeoutPipeline(timeout time.Duration, dir string, std
 		log("%s: %v", dir, c)
 	}
 
-	fmt.Println(c.name)
-	fmt.Println(c.args)
+	//fmt.Println(c.name)
+	//fmt.Println(c.args)
 	cmd := exec.Command(c.name, c.args...)
 	if c.envs != nil {
 		cmd.Env = append(os.Environ(), c.envs...)

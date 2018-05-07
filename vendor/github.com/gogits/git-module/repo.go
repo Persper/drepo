@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"errors"
-	"fmt"
+	//"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -75,7 +75,7 @@ func InitRepository(repoPath string, bare bool) error {
 	}
 	_, err := cmd.RunInDir(repoPath)
 
-	if err == nil {
+	/*if err == nil {
 		ipfs_cmd := NewCommand("remote")
 		ipfs_cmd.AddArguments("add", "ipfs_repo", "ipfs::")
 		ipfs_result, ipfs_err := ipfs_cmd.RunInDir(repoPath)
@@ -85,16 +85,16 @@ func InitRepository(repoPath string, bare bool) error {
 			fmt.Println(ipfs_err)
 		}
 
-		/* Empty repo can not be pushed to the remote repo. */
-		/*ipfs_cmd = NewCommand("push")
+		// Empty repo can not be pushed to the remote repo.
+		ipfs_cmd = NewCommand("push")
 		ipfs_cmd.AddArguments("ipfs_repo", "master")
 		ipfs_result, ipfs_err = ipfs_cmd.RunInDir(repoPath)
 		if ipfs_err == nil {
 			fmt.Println(ipfs_result)
 		} else {
 			fmt.Println(ipfs_err)
-		}*/
-	}
+		}
+	}*/
 
 	return err
 }
