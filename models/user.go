@@ -19,6 +19,9 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"os/exec"
+	"encoding/json"
+
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
@@ -33,6 +36,7 @@ import (
 	"github.com/gogits/gogs/pkg/avatar"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/tool"
+	// "github.com/gogits/gogs/routes/ipfs"
 )
 
 type UserType int
@@ -557,9 +561,12 @@ func CreateUser(u *User) (err error) {
 		return ErrEmailAlreadyUsed{u.Email}
 	}
 
+
 	u.LowerName = strings.ToLower(u.Name)
 	u.AvatarEmail = u.Email
 	u.Avatar = tool.HashEmail(u.AvatarEmail)
+
+
 	if u.Rands, err = GetUserSalt(); err != nil {
 		return err
 	}
@@ -580,6 +587,37 @@ func CreateUser(u *User) (err error) {
 	} else if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
 		return err
 	}
+
+	/* Push the user to IPFS When this user is not bare */
+	// ipfs.Push_User_to_IPFS(u)
+	// Step 1: Encode user data into JSON format
+	user_data, err := json.Marshal(u)
+	if err != nil {
+		fmt.Errorf("Can not encode user data: %v\n", err)
+	}
+
+	// Step 2: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", user_data)
+	fmt.Println(c)
+	cmd := exec.Command("sh", "-c", c)
+	out, err := cmd.Output()
+	if err != nil {
+		fmt.Errorf("Push User to IPFS: fails: %v\n", err)
+	}
+	strOut := strings.Split(string(out)," ")[1]
+	fmt.Println(string(out))
+
+	// Record the uport ID & IPFS hash
+	fmt.Println("UportId", string(u.UportId))
+	fmt.Println("IPFS hash", string(strOut))
+
+	/* Pull the user from IPFS, prepare for qingda */
+	// var newUser = new(User)
+	// err = json.Unmarshal(user_data, &newUser)
+	// if err != nil {
+	// 	fmt.Errorf("Can not decode data: %v\n", err)
+	// }
+	// fmt.Printf("%v\n", newUser)
 
 	return sess.Commit()
 }
