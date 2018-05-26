@@ -161,7 +161,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	}
 
 	// test
-	models.GetUserInfo(f.UportId, f.LoginSource)
+	models.GetUserInfo(f.UportId)
 
 	// u, err := models.UserLogin(f.UserName, f.Password, f.LoginSource)
 	u, err := models.UserLoginUportId(f.UportId, f.LoginSource)
