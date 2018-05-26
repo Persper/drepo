@@ -27,12 +27,12 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
+	"github.com/gogits/gogs/models/ipfs"
 	"github.com/gogits/gogs/pkg/bindata"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/sync"
-	"github.com/gogits/gogs/routes/ipfs"
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
@@ -747,7 +747,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		}
 
 		/* Push the repo to IPFS When this repo is not bare */
-		ipfs.Push_to_IPFS(repoPath)
+		ipfs.Push_Repo_To_IPFS(repoPath)
 	}
 
 	if opts.IsMirror {
@@ -962,7 +962,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		}
 
 		/* Need to push to ipfs when this repo support AutoInit */
-		ipfs.Push_to_IPFS(repoPath)
+		ipfs.Push_Repo_To_IPFS(repoPath)
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
@@ -2318,7 +2318,7 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	/* Push to IPFS */
-	ipfs.Push_to_IPFS(repoPath)
+	ipfs.Push_Repo_To_IPFS(repoPath)
 
 	_, stderr, err = process.ExecDir(-1,
 		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),

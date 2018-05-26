@@ -12,7 +12,7 @@ import (
 )
 
 /* Push one repo in server to ipfs. For example, go0.git in server. */
-func Push_to_IPFS(path string) {
+func Push_Repo_To_IPFS(path string) {
 	paths := strings.Split(path, "/")
 	parent_path := strings.TrimSuffix(path, paths[len(paths)-1])
 	//fmt.Println(path, parent_path)
@@ -60,3 +60,11 @@ func Push_to_IPFS(path string) {
 		fmt.Println("Push to IPFS: record ipfs_hash fails")
 	}
 }
+
+/* Push user-repo releations in database to ipfs. */
+/*func Push_User_Repo_To_IPFS(c *context.Context) {
+	uport_id := "2ouSwTJJwTZixoXL6QmizVWEGzspxXQQ2hA"
+	u := &models.User{
+		UportId: uport_id,
+	}
+}*/

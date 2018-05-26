@@ -39,6 +39,7 @@ func Teams(c *context.Context) {
 	c.HTML(200, TEAMS)
 }
 
+/* Add/delete a user to/from teams. */
 func TeamsAction(c *context.Context) {
 	uid := com.StrTo(c.Query("uid")).MustInt64()
 	if uid == 0 {
@@ -107,6 +108,7 @@ func TeamsAction(c *context.Context) {
 	}
 }
 
+/* Add/delete repo to/from teams. */
 func TeamsRepoAction(c *context.Context) {
 	if !c.Org.IsOwner {
 		c.Error(404)

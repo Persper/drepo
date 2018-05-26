@@ -148,7 +148,6 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	fmt.Println("--0 username: ")
 	loginSources, err := models.ActivatedLoginSources()
 	if err != nil {
 		c.ServerError("ActivatedLoginSources", err)
@@ -161,7 +160,10 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	//u, err := models.UserLogin(f.UserName, f.Password, f.LoginSource)
+	// test
+	models.GetUserInfo(f.UportId, f.LoginSource)
+
+	// u, err := models.UserLogin(f.UserName, f.Password, f.LoginSource)
 	u, err := models.UserLoginUportId(f.UportId, f.LoginSource)
 	if err != nil {
 		switch err.(type) {
@@ -179,13 +181,11 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	fmt.Println("--3 username: ")
 	if !u.IsEnabledTwoFactor() {
 		afterLogin(c, u, f.Remember)
 		return
 	}
 
-	fmt.Println("--4 username: ")
 	c.Session.Set("twoFactorRemember", f.Remember)
 	c.Session.Set("twoFactorUserID", u.ID)
 	c.Redirect(setting.AppSubURL + "/user/login/two_factor")

@@ -23,10 +23,10 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
+	"github.com/gogits/gogs/models/ipfs"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/tool"
-	"github.com/gogits/gogs/routes/ipfs"
 )
 
 const (
@@ -310,7 +310,7 @@ func serviceRPC(h serviceHandler, service string) {
 
 	/* Push the repo to IPFS When issuing receive-pack for git push */
 	if service == "receive-pack" {
-		ipfs.Push_to_IPFS(h.dir)
+		ipfs.Push_Repo_To_IPFS(h.dir)
 	}
 }
 

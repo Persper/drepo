@@ -22,9 +22,9 @@ import (
 	git "github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models/errors"
+	"github.com/gogits/gogs/models/ipfs"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routes/ipfs"
 )
 
 // ___________    .___.__  __    ___________.__.__
@@ -185,7 +185,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	}
 
 	/* Push the repo to IPFS When this repo is not bare */
-	ipfs.Push_to_IPFS(repoPath)
+	ipfs.Push_Repo_To_IPFS(repoPath)
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return nil
@@ -315,7 +315,7 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 	}
 
 	/* Push the repo to IPFS */
-	ipfs.Push_to_IPFS(repo.RepoPath())
+	ipfs.Push_Repo_To_IPFS(repo.RepoPath())
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return nil
@@ -543,7 +543,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 	}
 
 	/* Push the repo to IPFS */
-	ipfs.Push_to_IPFS(repo.RepoPath())
+	ipfs.Push_Repo_To_IPFS(repo.RepoPath())
 
 	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return DeleteUploads(uploads...)
