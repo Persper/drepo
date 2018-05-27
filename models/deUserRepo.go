@@ -5,17 +5,19 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	//"github.com/go-xorm/xorm"
 	//"github.com/gogits/gogs/models/ipfs"
 )
 
-func GetUserInfo(uportid string) {
+func PushUserRepoInfo(uportid string) {
 	/* User: get the corresponding user.  */
 	var user *User
 	user = &User{UportId: uportid}
 	hasUser, err := x.Get(user)
-
 	if err != nil {
 		fmt.Println("Error: get user!")
 	}
@@ -113,8 +115,33 @@ func GetUserInfo(uportid string) {
 		/* OrgUser: alreay in team_user. */
 
 		/* Add the content into the file and push the file to IPFS. */
+		user_data, _ := json.Marshal(user)
+		filename := uportid + ".txt"
+		file, file_err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
+		if file_err != nil {
+			fmt.Println("Error: create user_repo file!")
+		}
+		defer file.Close()
+
+		_, file_err = file.Write(user_data)
+		if file_err != nil {
+			fmt.Println("Write user_data error!")
+		}
 
 	} else {
 		fmt.Println("Error: no this user!")
 	}
+}
+
+func GetUserRepoInfo(uportid string) {
+	filename := uportid + ".txt"
+	user_data, _ := ioutil.ReadFile(filename)
+	var newUser = new(User)
+	err := json.Unmarshal(user_data, &newUser)
+
+	if err != nil {
+		fmt.Println("Error: load the uport_repo file!")
+	}
+
+	//fmt.Println(newUser)
 }
