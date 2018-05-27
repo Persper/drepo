@@ -25,7 +25,7 @@ func Push_Repo_To_IPFS(path string) {
 	cmd.Dir = parent_path
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Push to IPFS: mv fails")
+		fmt.Println("Push_Repo_To_IPFS: mv fails")
 		return
 	}
 
@@ -41,7 +41,7 @@ func Push_Repo_To_IPFS(path string) {
 		fmt.Println(out_str)
 		id := strings.Index(out_str, "to IPFS as")
 		ipfs_hash = out_str[id+16 : id+62]
-		fmt.Println("Push to IPFS: " + ipfs_hash)
+		fmt.Println("Push_Repo_To_IPFS: " + ipfs_hash)
 	}
 
 	// Transform .git to sample.git
@@ -49,22 +49,31 @@ func Push_Repo_To_IPFS(path string) {
 	cmd.Dir = parent_path
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println("Push to IPFS: the second mv fails")
+		fmt.Println("Push_Repo_To_IPFS: the second mv fails")
 	}
 
 	// Record the ipfs_hash
 	txt_path := path + "/ipfs_hash"
-	//fmt.Println("output path: " + txt_path)
 	err = ioutil.WriteFile(txt_path, []byte(ipfs_hash), 0666)
 	if err != nil {
-		fmt.Println("Push to IPFS: record ipfs_hash fails")
+		fmt.Println("Push_Repo_To_IPFS: record ipfs_hash fails")
 	}
 }
 
-/* Push user-repo releations in database to ipfs. */
-/*func Push_User_Repo_To_IPFS(c *context.Context) {
-	uport_id := "2ouSwTJJwTZixoXL6QmizVWEGzspxXQQ2hA"
-	u := &models.User{
-		UportId: uport_id,
+/* Push one file to IPFS. */
+func Push_File_To_IPFS(file_name string) {
+	cmd := exec.Command("pwd")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Push_File_To_IPFS: pwd fails")
 	}
-}*/
+
+	cmd = exec.Command("ipfs", "add", file_name)
+	cmd.Dir = string(out[0 : len(out)-1])
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Push_File_To_IPFS: ipfs add fails")
+		fmt.Println(err)
+	}
+	fmt.Println(string(out))
+}
