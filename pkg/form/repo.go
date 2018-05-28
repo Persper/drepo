@@ -12,7 +12,7 @@ import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/models"
+	"github.com/gogs/gogs/models"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -262,7 +262,7 @@ func (f *CreateMilestone) Validate(ctx *macaron.Context, errs binding.Errors) bi
 
 type CreateLabel struct {
 	ID    int64
-	Title string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_name"`
+	Title string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_title"`
 	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
 }
 

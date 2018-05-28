@@ -10,8 +10,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	. "github.com/gogits/gogs/pkg/markup"
-	"github.com/gogits/gogs/pkg/setting"
+	. "github.com/gogs/gogs/pkg/markup"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 func Test_IsReadmeFile(t *testing.T) {
@@ -115,6 +115,19 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 					"test (#54321 extra) issue", "test (<a href=\"/prefix/issues/54321\">#54321</a> extra) issue",
 					"test (#54321 issue)", "test (<a href=\"/prefix/issues/54321\">#54321</a> issue)",
 					"test (#54321)", "test (<a href=\"/prefix/issues/54321\">#54321</a>)",
+				}
+
+				for i := 0; i < len(testCases); i += 2 {
+					So(string(RenderIssueIndexPattern([]byte(testCases[i]), urlPrefix, metas)), ShouldEqual, testCases[i+1])
+				}
+			})
+			Convey("It should render issue mention in square brackets", func() {
+				testCases := []string{
+					"[#54321 issue]", "[<a href=\"/prefix/issues/54321\">#54321</a> issue]",
+					"test [#54321] issue", "test [<a href=\"/prefix/issues/54321\">#54321</a>] issue",
+					"test [#54321 extra] issue", "test [<a href=\"/prefix/issues/54321\">#54321</a> extra] issue",
+					"test [#54321 issue]", "test [<a href=\"/prefix/issues/54321\">#54321</a> issue]",
+					"test [#54321]", "test [<a href=\"/prefix/issues/54321\">#54321</a>]",
 				}
 
 				for i := 0; i < len(testCases); i += 2 {
@@ -259,6 +272,19 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 					"test (ABG-124 extra) issue", "test (<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> extra) issue",
 					"test (ABG-124 issue)", "test (<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> issue)",
 					"test (ABG-124)", "test (<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>)",
+				}
+
+				for i := 0; i < len(testCases); i += 2 {
+					So(string(RenderIssueIndexPattern([]byte(testCases[i]), urlPrefix, metas)), ShouldEqual, testCases[i+1])
+				}
+			})
+			Convey("It should render issue mention in square brackets", func() {
+				testCases := []string{
+					"[ABG-124] issue", "[<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>] issue",
+					"test [ABG-124] issue", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>] issue",
+					"test [ABG-124 extra] issue", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> extra] issue",
+					"test [ABG-124 issue]", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> issue]",
+					"test [ABG-124]", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>]",
 				}
 
 				for i := 0; i < len(testCases); i += 2 {

@@ -23,16 +23,16 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
-	git "github.com/gogits/git-module"
-	api "github.com/gogits/go-gogs-client"
+	git "github.com/gogs/git-module"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/models/ipfs"
-	"github.com/gogits/gogs/pkg/bindata"
-	"github.com/gogits/gogs/pkg/markup"
-	"github.com/gogits/gogs/pkg/process"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/pkg/sync"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/models/ipfs"
+	"github.com/gogs/gogs/pkg/bindata"
+	"github.com/gogs/gogs/pkg/markup"
+	"github.com/gogs/gogs/pkg/process"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/sync"
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
@@ -859,7 +859,7 @@ type CreateRepoOptions struct {
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
-	relPath := path.Join("conf", tp, strings.TrimLeft(name, "./"))
+	relPath := path.Join("conf", tp, strings.TrimLeft(path.Clean("/"+name), "/"))
 
 	// Use custom file when available.
 	customPath := path.Join(setting.CustomPath, relPath)
