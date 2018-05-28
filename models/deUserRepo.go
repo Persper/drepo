@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 	//"github.com/go-xorm/xorm"
-	"github.com/gogits/gogs/models/ipfs"
+	"github.com/gogs/gogs/models/ipfs"
 )
 
 func PushUserRepoInfo(uportid string) {
