@@ -10,18 +10,17 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"os/exec"
-	"encoding/json"
-
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
@@ -29,14 +28,14 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/git-module"
-	api "github.com/gogits/go-gogs-client"
+	"github.com/gogs/git-module"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/avatar"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/pkg/tool"
-	// "github.com/gogits/gogs/routes/ipfs"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/avatar"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
+	// "github.com/gogs/gogs/routes/ipfs"
 )
 
 type UserType int
@@ -123,6 +122,11 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
+}
+
+// IDStr returns string representation of user's ID.
+func (u *User) IDStr() string {
+	return com.ToStr(u.ID)
 }
 
 func (u *User) APIFormat() *api.User {
@@ -561,11 +565,9 @@ func CreateUser(u *User) (err error) {
 		return ErrEmailAlreadyUsed{u.Email}
 	}
 
-
 	u.LowerName = strings.ToLower(u.Name)
 	u.AvatarEmail = u.Email
 	u.Avatar = tool.HashEmail(u.AvatarEmail)
-
 
 	if u.Rands, err = GetUserSalt(); err != nil {
 		return err
@@ -604,7 +606,7 @@ func CreateUser(u *User) (err error) {
 	if err != nil {
 		fmt.Errorf("Push User to IPFS: fails: %v\n", err)
 	}
-	strOut := strings.Split(string(out)," ")[1]
+	strOut := strings.Split(string(out), " ")[1]
 	fmt.Println(string(out))
 
 	// Record the uport ID & IPFS hash

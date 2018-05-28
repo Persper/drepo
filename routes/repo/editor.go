@@ -13,13 +13,13 @@ import (
 
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/git-module"
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/form"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/pkg/template"
-	"github.com/gogits/gogs/pkg/tool"
+	"github.com/gogs/git-module"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/form"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/template"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 const (
@@ -140,7 +140,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		branchName = f.NewBranchName
 	}
 
-	f.TreePath = strings.Trim(f.TreePath, " /")
+	f.TreePath = strings.Trim(path.Clean("/"+f.TreePath), " /")
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 
 	c.Data["ParentTreePath"] = path.Dir(c.Repo.TreePath)
@@ -431,7 +431,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		branchName = f.NewBranchName
 	}
 
-	f.TreePath = strings.Trim(f.TreePath, " /")
+	f.TreePath = strings.Trim(path.Clean("/"+f.TreePath), " /")
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 	if len(treeNames) == 0 {
 		// We must at least have one element for user to input.
