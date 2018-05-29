@@ -26,6 +26,7 @@ func Home(c *context.Context) {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
 			c.Success(user.ACTIVATE)
 		} else {
+			/* Enter into this when user login successfully。*/
 			user.Dashboard(c)
 		}
 		return

@@ -142,6 +142,7 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 		return
 	}
 
+	/* Enter into routes.Home and further enter into user.Dashboard(c). */
 	c.SubURLRedirect("/")
 }
 
@@ -159,9 +160,6 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		c.Success(LOGIN)
 		return
 	}
-
-	// test
-	models.PushUserRepoInfo(f.UportId)
 
 	// u, err := models.UserLogin(f.UserName, f.Password, f.LoginSource)
 	u, err := models.UserLoginUportId(f.UportId, f.LoginSource)
@@ -181,6 +179,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	}
 
 	if !u.IsEnabledTwoFactor() {
+		// Enter into this using uportID to login.
 		afterLogin(c, u, f.Remember)
 		return
 	}

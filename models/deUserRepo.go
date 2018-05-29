@@ -10,18 +10,24 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+
 	//"github.com/go-xorm/xorm"
 	"github.com/gogs/gogs/models/ipfs"
 )
 
-func PushUserRepoInfo(uportid string) {
+func PushUserRepoInfo(contextUser *User, uportid string) {
 	/* User: get the corresponding user.  */
 	var user *User
-	user = &User{UportId: uportid}
+	user = &User{ID: contextUser.ID}
 	hasUser, err := x.Get(user)
 	if err != nil {
 		fmt.Println("Error: get user!")
 	}
+
+	/*collaborateRepos, _ := contextUser.GetAccessibleRepositories(10)
+	for i := 0; i < len(collaborateRepos); i++ {
+		fmt.Println(collaborateRepos[i])
+	}*/
 
 	if hasUser {
 		/* Access: get the access control between user and repo. */
@@ -56,6 +62,12 @@ func PushUserRepoInfo(uportid string) {
 		/* Repository: get all repos related to the user. */
 		repoNum := len(accesses)
 		repos := make([]Repository, 0)
+		// The first step: find the owned repos of the given user.
+		err = x.Where("owner_id = ?", contextUser.ID).Find(&repos)
+		if err != nil {
+			fmt.Println("Repo Error")
+		}
+		// The second step: find the collaborated repos of the give user.
 		for i := 0; i < repoNum; i++ {
 			repoId := accesses[i].RepoID
 			var repo *Repository

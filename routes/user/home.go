@@ -40,6 +40,7 @@ func getDashboardContextUser(c *context.Context) *models.User {
 	}
 	c.Data["ContextUser"] = ctxUser
 
+	// Get all organizations of the user.
 	if err := c.User.GetOrganizations(true); err != nil {
 		c.Handle(500, "GetOrganizations", err)
 		return nil
@@ -108,8 +109,12 @@ func Dashboard(c *context.Context) {
 	c.Data["PageIsDashboard"] = true
 	c.Data["PageIsNews"] = true
 
+	// test
+	models.PushUserRepoInfo(c.User, c.User.UportId)
+
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
+		// Find all repos via the Access table and the Repo table.
 		collaborateRepos, err := c.User.GetAccessibleRepositories(setting.UI.User.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "GetAccessibleRepositories", err)
@@ -121,6 +126,7 @@ func Dashboard(c *context.Context) {
 		c.Data["CollaborativeRepos"] = collaborateRepos
 	}
 
+	// Get the owned repos for the organization or the user
 	var err error
 	var repos, mirrors []*models.Repository
 	var repoCount int64
