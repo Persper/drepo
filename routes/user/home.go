@@ -110,11 +110,11 @@ func Dashboard(c *context.Context) {
 	c.Data["PageIsNews"] = true
 
 	// test
-	models.PushUserRepoInfo(c.User, c.User.UportId)
+	models.GetUserRepoInfo(c.User)
 
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
-		// Find all repos via the Access table and the Repo table.
+		// Find all collaborted repos via the Access table and the Repo table.
 		collaborateRepos, err := c.User.GetAccessibleRepositories(setting.UI.User.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "GetAccessibleRepositories", err)
@@ -143,6 +143,7 @@ func Dashboard(c *context.Context) {
 			return
 		}
 	} else {
+		// Find all owned repos via the owned id of the repo table.
 		if err = ctxUser.GetRepositories(1, setting.UI.User.RepoPagingNum); err != nil {
 			c.Handle(500, "GetRepositories", err)
 			return
