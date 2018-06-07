@@ -599,10 +599,9 @@ func CreateUser(u *User) (err error) {
 
 	err = sess.Commit()
 
+	// Push new user data to the blockchain
 	if err != nil {
-		if canPushToBlockchain(u) == true {
-			return PushUserInfo(u)
-		}
+		return PushUserInfo(u)
 	}
 
 	return err
@@ -737,6 +736,12 @@ func updateUser(e Engine, u *User) error {
 	u.Description = tool.TruncateString(u.Description, 255)
 
 	_, err := e.Id(u.ID).AllCols().Update(u)
+
+	// Push new user data to the blockchain
+	if err != nil {
+		return PushUserInfo(u)
+	}
+
 	return err
 }
 

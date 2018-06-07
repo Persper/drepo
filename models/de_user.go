@@ -13,6 +13,14 @@ import (
 
 /// Push the user data to IPFS and record the new ipfsHash in the blockchain
 func PushUserInfo(contextUser *User) (err error) {
+	// Do some checks
+	if u.IsOrganization() {
+		return nil
+	}
+	if !canPushToBlockchain(u) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
 	// Get the corresponding user.
 	var user *User
 	user = &User{ID: contextUser.ID}
