@@ -15,13 +15,11 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -348,6 +346,8 @@ func (u *User) UploadAvatar(data []byte) error {
 
 	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
 
+	/* TODO: push the avatar to the blockchain. */
+
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -377,6 +377,8 @@ func (u *User) UploadAvatar(data []byte) error {
 func (u *User) DeleteAvatar() error {
 	log.Trace("DeleteAvatar [%d]: %s", u.ID, u.CustomAvatarPath())
 	os.Remove(u.CustomAvatarPath())
+
+	/* TODO: Delete the avatar from the blockchain. */
 
 	u.UseCustomAvatar = false
 	if err := UpdateUser(u); err != nil {
@@ -595,38 +597,15 @@ func CreateUser(u *User) (err error) {
 		return err
 	}
 
-	/* Push the user to IPFS When this user is not bare */
-	// ipfs.Push_User_to_IPFS(u)
-	// Step 1: Encode user data into JSON format
-	user_data, err := json.Marshal(u)
+	err = sess.Commit()
+
 	if err != nil {
-		fmt.Errorf("Can not encode user data: %v\n", err)
+		if canPushToBlockchain(u) == true {
+			return PushUserInfo(u)
+		}
 	}
 
-	// Step 2: Put the encoded data into IPFS
-	c := fmt.Sprintf("echo '%s' | ipfs add ", user_data)
-	fmt.Println(c)
-	cmd := exec.Command("sh", "-c", c)
-	out, err := cmd.Output()
-	if err != nil {
-		fmt.Errorf("Push User to IPFS: fails: %v\n", err)
-	}
-	strOut := strings.Split(string(out), " ")[1]
-	fmt.Println(string(out))
-
-	// Record the uport ID & IPFS hash
-	fmt.Println("UportId", string(u.UportId))
-	fmt.Println("IPFS hash", string(strOut))
-
-	/* Pull the user from IPFS, prepare for qingda */
-	// var newUser = new(User)
-	// err = json.Unmarshal(user_data, &newUser)
-	// if err != nil {
-	// 	fmt.Errorf("Can not decode data: %v\n", err)
-	// }
-	// fmt.Printf("%v\n", newUser)
-
-	return sess.Commit()
+	return err
 }
 
 func countUsers(e Engine) int64 {
