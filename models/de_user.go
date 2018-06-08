@@ -46,7 +46,7 @@ func PushUserInfo(contextUser *User) (err error) {
 		ipfsHash := strings.Split(string(out), " ")[1]
 
 		// Step3: Modify the ipfsHash in the smart contract
-		// TODO: setUserTableIpfsHash(ipfsHash)
+		// TODO: setUserInfo(ipfsHash)
 		ipfsHash = ipfsHash
 	}
 
@@ -55,7 +55,7 @@ func PushUserInfo(contextUser *User) (err error) {
 
 // Get the new ipfsHash from the blockchain and get the user info from IPFS
 func GetUserInfo(contextUser *User) (err error) {
-	// Step1: getUserTableIPFSHash() from the smart contract
+	// Step1: get the user info hash via addrToUserInfo
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
 	// Step2: get the ipfs file and get the user data
@@ -72,6 +72,9 @@ func GetUserInfo(contextUser *User) (err error) {
 	if err2 != nil {
 		return fmt.Errorf("Can not decode data: %v", err)
 	}
+
+	// Step4: remove the isAdmin column
+	newUser.IsAdmin = false
 
 	// Step4: write into the local database
 	// TODO:
