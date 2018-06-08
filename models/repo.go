@@ -32,7 +32,6 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/models/ipfs"
 	"github.com/gogs/gogs/pkg/bindata"
 	"github.com/gogs/gogs/pkg/markup"
 	"github.com/gogs/gogs/pkg/process"
@@ -356,6 +355,7 @@ func (repo *Repository) mustOwner(e Engine) *User {
 }
 
 func (repo *Repository) UpdateSize() error {
+	// Note the updated size do not need to be pushed to the blockchain because it can be recovered from the de-repo
 	countObject, err := git.GetRepoSize(repo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("GetRepoSize: %v", err)
@@ -733,6 +733,12 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		}
 	}
 
+	// Push the repo table to the blockchain
+	err = PushRepoInfo(owner, repo)
+	if err != nil {
+		//return err
+	}
+
 	if !repo.IsBare {
 		// Try to get HEAD branch and set it as default branch.
 		gitRepo, err := git.OpenRepository(repoPath)
@@ -751,8 +757,11 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 			log.Error(2, "UpdateSize [repo_id: %d]: %v", repo.ID, err)
 		}
 
-		/* Push the repo to IPFS When this repo is not bare */
-		ipfs.Push_Repo_To_IPFS(repoPath)
+		// Push the repo content to the IPFS
+		err = PushRepoContent(owner, repoPath)
+		if err != nil {
+			//return err
+		}
 	}
 
 	if opts.IsMirror {
@@ -966,8 +975,11 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 			return fmt.Errorf("initRepoCommit: %v", err)
 		}
 
-		/* Need to push to ipfs when this repo support AutoInit */
-		ipfs.Push_Repo_To_IPFS(repoPath)
+		// Push the repo content to the IPFS
+		err = PushRepoContent(doer, repoPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
@@ -1088,7 +1100,14 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 		}
 	}
 
-	return repo, sess.Commit()
+	err = sess.Commit()
+
+	// Push the repo table to the blockchain
+	if err != nil {
+		err = PushRepoInfo(doer, repo)
+	}
+
+	return repo, err
 }
 
 func countRepositories(userID int64, private bool) int64 {
@@ -2322,8 +2341,16 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		return nil, fmt.Errorf("git clone: %v", stderr)
 	}
 
-	/* Push to IPFS */
-	ipfs.Push_Repo_To_IPFS(repoPath)
+	// Push the repo table to the blockchain
+	err = PushRepoInfo(owner, repo)
+	if err != nil {
+		//return err
+	}
+	// Push the repo content to the IPFS
+	err = PushRepoContent(owner, repoPath)
+	if err != nil {
+		//return err
+	}
 
 	_, stderr, err = process.ExecDir(-1,
 		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),

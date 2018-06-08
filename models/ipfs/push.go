@@ -16,56 +16,55 @@ import (
 	"strings"
 )
 
-/* Push one repo in server to ipfs. For example, go0.git in server. */
-func Push_Repo_To_IPFS(path string) {
+// Push one repo in server to ipfs. For example, go0.git in server.
+func Push_Repo_To_IPFS(path string) (string, error) {
 	paths := strings.Split(path, "/")
 	parent_path := strings.TrimSuffix(path, paths[len(paths)-1])
-	//fmt.Println(path, parent_path)
 	repo_name := strings.Split(paths[len(paths)-1], ".")
-	//fmt.Println(repo_name[0], repo_name[1])
 	tmp_name := "." + repo_name[1]
 
-	// Transform sample.git to .git
+	// Step1: transform sample.git to .git
 	cmd := exec.Command("mv", paths[len(paths)-1], tmp_name)
 	cmd.Dir = parent_path
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Push_Repo_To_IPFS: mv fails")
-		return
+		return "", fmt.Errorf("Push_Repo_To_IPFS: %v", err)
 	}
 
-	// Push to IPFS
+	// Step2: push to IPFS
 	cmd = exec.Command("git", "push", "ipfs::", "master") //the remote "ipfs_repo" only in newly generated repo, not in fork repo
 	cmd.Dir = parent_path
 	out, ipfs_err := cmd.CombinedOutput()
 	out_str := string(out)
 	var ipfs_hash string
 	if ipfs_err != nil {
-		fmt.Println(ipfs_err)
+		return "", fmt.Errorf("Push_Repo_To_IPFS: %v", err)
 	} else {
 		fmt.Println(out_str)
 		id := strings.Index(out_str, "to IPFS as")
 		ipfs_hash = out_str[id+16 : id+62]
-		fmt.Println("Push_Repo_To_IPFS: " + ipfs_hash)
+		//fmt.Println("Push_Repo_To_IPFS: " + ipfs_hash)
 	}
 
-	// Transform .git to sample.git
+	// Step3: transform .git to sample.git
 	cmd = exec.Command("mv", tmp_name, paths[len(paths)-1])
 	cmd.Dir = parent_path
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println("Push_Repo_To_IPFS: the second mv fails")
+		return "", fmt.Errorf("Push_Repo_To_IPFS: %v", err)
 	}
 
-	// Record the ipfs_hash
+	// Step4: record the ipfs_hash
 	txt_path := path + "/ipfs_hash"
 	err = ioutil.WriteFile(txt_path, []byte(ipfs_hash), 0666)
 	if err != nil {
-		fmt.Println("Push_Repo_To_IPFS: record ipfs_hash fails")
+		return "", fmt.Errorf("Push_Repo_To_IPFS: %v", err)
 	}
+
+	return ipfs_hash[6:], nil
 }
 
-/* Push one file to IPFS. */
+// Push one file to IPFS.
 func Push_File_To_IPFS(file_name string) {
 	cmd := exec.Command("pwd")
 	out, err := cmd.CombinedOutput()

@@ -11,13 +11,13 @@ import (
 	"strings"
 )
 
-/// Push the user data to IPFS and record the new ipfsHash in the blockchain
+/// Push the user info to IPFS and record the new ipfsHash in the blockchain
 func PushUserInfo(contextUser *User) (err error) {
 	// Do some checks
-	if u.IsOrganization() {
+	if contextUser.IsOrganization() {
 		return nil
 	}
-	if !canPushToBlockchain(u) {
+	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
@@ -46,16 +46,16 @@ func PushUserInfo(contextUser *User) (err error) {
 		ipfsHash := strings.Split(string(out), " ")[1]
 
 		// Step3: Modify the ipfsHash in the smart contract
-		// TODO: setIPFSHash(ipfsHash)
+		// TODO: setUserTableIpfsHash(ipfsHash)
 		ipfsHash = ipfsHash
 	}
 
 	return nil
 }
 
-// Get the new ipfsHash from the blockchain and get the user data from IPFS
+// Get the new ipfsHash from the blockchain and get the user info from IPFS
 func GetUserInfo(contextUser *User) (err error) {
-	// Step1: getIPFSHash() from the smart contract
+	// Step1: getUserTableIPFSHash() from the smart contract
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
 	// Step2: get the ipfs file and get the user data
