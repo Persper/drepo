@@ -61,22 +61,22 @@ func GetUserInfo(contextUser *User) (err error) {
 	// Step2: get the ipfs file and get the user data
 	c := fmt.Sprintf("ipfs cat ", ipfsHash)
 	cmd := exec.Command("sh", "-c", c)
-	user_data, err2 := cmd.Output()
-	if err2 != nil {
+	user_data, err := cmd.Output()
+	if err != nil {
 		return fmt.Errorf("Get User data from IPFS: fails: %v", err)
 	}
 
 	// Step3: unmarshall user data
 	var newUser = new(User)
-	err2 = json.Unmarshal(user_data, &newUser)
-	if err2 != nil {
+	err = json.Unmarshal(user_data, &newUser)
+	if err != nil {
 		return fmt.Errorf("Can not decode data: %v", err)
 	}
 
 	// Step4: remove the isAdmin column
 	newUser.IsAdmin = false
 
-	// Step4: write into the local database
+	// Step5: write into the local database
 	// TODO:
 	CreateUser(newUser)
 
