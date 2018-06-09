@@ -12,6 +12,19 @@ import (
 	"strings"
 )
 
+// The repo table in the IPFS
+type DeRepo struct {
+	ID int64
+}
+
+func transferRepoToDeRepo(deRepo *DeRepo, repo *Repository) {
+
+}
+
+func deTransferRepoToDeRepo(deRepo *DeRepo, repo *Repository) error {
+	return nil
+}
+
 // Push the repo info to IPFS and record the new ipfsHash in the blockchain
 func PushRepoInfo(modifier *User, repo *Repository) (err error) {
 	if !canPushToBlockchain(modifier) {

@@ -33,6 +33,9 @@ type DeUser struct {
 	//user.email_address.email[]
 	//star.repo_id[]
 	//watch.repo.id[]
+	//repo_blacklist
+	//team_blacklist
+	//org_blacklist
 }
 
 func transferUserToDeUser(deUser *DeUser, user *User) {
@@ -122,7 +125,8 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 }
 
 /// Push the user info to IPFS and record the new ipfsHash in the blockchain
-func PushUserInfo(contextUser *User) (err error) {
+/// pushMode: 0 - register; 1 - update; 2 - delete;
+func PushUserInfo(contextUser *User， pushMode int) (err error) {
 	// Do some checks
 	if contextUser.IsOrganization() {
 		return nil
@@ -140,7 +144,16 @@ func PushUserInfo(contextUser *User) (err error) {
 	}
 
 	if hasUser {
-		// Step 1: Encode user data into JSON format
+		// Step1: register/deregister the user if it does not exist
+		if pushMode == 1 {
+			//registerName
+		}
+		if pushMode == 2 {
+			//deregisterName
+			return nil
+		}
+
+		// Step 2: Encode user data into JSON format
 		deUser := new(DeUser)
 		transferUserToDeUser(deUser, user)
 		user_data, err := json.Marshal(deUser)
@@ -148,7 +161,7 @@ func PushUserInfo(contextUser *User) (err error) {
 			return fmt.Errorf("Can not encode user data: %v", err)
 		}
 
-		// Step 2: Put the encoded data into IPFS
+		// Step 3: Put the encoded data into IPFS
 		c := fmt.Sprintf("echo '%s' | ipfs add ", user_data)
 		cmd := exec.Command("sh", "-c", c)
 		out, err2 := cmd.Output()
@@ -157,7 +170,7 @@ func PushUserInfo(contextUser *User) (err error) {
 		}
 		ipfsHash := strings.Split(string(out), " ")[1]
 
-		// Step3: Modify the ipfsHash in the smart contract
+		// Step4: Modify the ipfsHash in the smart contract
 		// TODO: setUserInfo(ipfsHash)
 		ipfsHash = ipfsHash
 	}
