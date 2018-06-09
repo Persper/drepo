@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// The org table in the IPFS
+// The orgUser table in the IPFS
 type DeOrgUser struct {
 	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
 	IsPublic bool
