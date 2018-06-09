@@ -57,7 +57,7 @@ func transferUserToDeUser(deUser *DeUser, user *User) {
 	deUser.UseCustomAvatar = user.UseCustomAvatar
 }
 
-func deTransferUserToDeUser(deUser *DeUser, user *User) {
+func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 	user.ID = deUser.ID
 	user.Name = deUser.Name
 	user.FullName = deUser.FullName
@@ -86,18 +86,41 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) {
 	user.NumTeams = 0
 	user.NumMembers = 0
 
-	//TODO:
-	user.NumFollowers = 0
-	user.NumFollowing = 0
+	// TODO: the follow and star table is lost
+	var err error
+	var total int64
+
+	follow := new(Follow)
+	total, err = x.Where("follow_id = ?", user.ID).Count(follow)
+	if err != nil {
+		return fmt.Errorf("Can not get user numfollowers: %v", err)
+	}
+	user.NumFollowers = int(total)
+
+	total, err = x.Where("user_id = ?", user.ID).Count(follow)
+	if err != nil {
+		return fmt.Errorf("Can not get user numfollowing: %v", err)
+	}
+	user.NumFollowing = int(total)
+
+	// star is useless
 	user.NumStars = 0
-	user.NumRepos = 0
+
+	repo := new(Repository)
+	total, err = x.Where("owner_id = ?", user.ID).Count(repo)
+	if err != nil {
+		return fmt.Errorf("Can not get user numRepos: %v", err)
+	}
+	user.NumRepos = int(total)
 
 	// TODO: not sure
-	//user.UportId
+	// user.UportId
 	user.IsActive = true
 	user.AllowGitHook = false
 	user.AllowImportLocal = false
 	user.ProhibitLogin = false
+
+	return nil
 }
 
 /// Push the user info to IPFS and record the new ipfsHash in the blockchain

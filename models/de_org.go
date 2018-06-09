@@ -11,12 +11,12 @@ type DeOrg struct {
 	Description string
 }
 
-func transferUserToDeUser(deOrg *DeOrg, org *User) {
-	DeOrg.Description = org.Description
+func transferOrgToDeOrg(deOrg *DeOrg, org *User) {
+	deOrg.Description = org.Description
 }
 
-func deTransferUserToDeUser(deOrg *DeOrg, org *User) {
-	org.Description = DeOrg.Description
+func deTransferOrgToDeOrg(deOrg *DeOrg, org *User) {
+	org.Description = deOrg.Description
 
 	//TODO:
 	org.NumTeams = 0
