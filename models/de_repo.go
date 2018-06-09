@@ -21,7 +21,7 @@ func transferRepoToDeRepo(deRepo *DeRepo, repo *Repository) {
 
 }
 
-func deTransferRepoToDeRepo(deRepo *DeRepo, repo *Repository) error {
+func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	return nil
 }
 

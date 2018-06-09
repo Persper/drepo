@@ -26,6 +26,7 @@ type DeUser struct {
 	Rands              string `xorm:"VARCHAR(10)"`
 	Salt               string `xorm:"VARCHAR(10)"`
 	CreatedUnix        int64
+	UpdatedUnix        int64
 	LastRepoVisibility bool
 	Avatar             string `xorm:"VARCHAR(2048) NOT NULL"`
 	AvatarEmail        string `xorm:"NOT NULL"`
@@ -52,13 +53,14 @@ func transferUserToDeUser(deUser *DeUser, user *User) {
 	deUser.Rands = user.Rands
 	deUser.Salt = user.Salt
 	deUser.CreatedUnix = user.CreatedUnix
+	deUser.UpdatedUnix = user.UpdatedUnix
 	deUser.LastRepoVisibility = user.LastRepoVisibility
 	deUser.Avatar = user.Avatar
 	deUser.AvatarEmail = user.AvatarEmail
 	deUser.UseCustomAvatar = user.UseCustomAvatar
 }
 
-func deTransferUserToDeUser(deUser *DeUser, user *User) error {
+func transferDeUserToUser(deUser *DeUser, user *User) error {
 	user.ID = deUser.ID
 	user.Name = deUser.Name
 	user.FullName = deUser.FullName
@@ -72,6 +74,7 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 	user.Rands = deUser.Rands
 	user.Salt = deUser.Salt
 	user.CreatedUnix = deUser.CreatedUnix
+	user.UpdatedUnix = deUser.UpdatedUnix
 	user.LastRepoVisibility = deUser.LastRepoVisibility
 	user.Avatar = deUser.Avatar
 	user.AvatarEmail = deUser.AvatarEmail
@@ -80,12 +83,20 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 	// recovery deUser to user
 	user.Type = USER_TYPE_INDIVIDUAL
 	user.LowerName = strings.ToLower(user.Name)
-	user.UpdatedUnix = user.CreatedUnix
 	user.MaxRepoCreation = -1
 	user.IsAdmin = false
+
+	// org
 	user.Description = ""
 	user.NumTeams = 0
 	user.NumMembers = 0
+
+	// TODO: not sure
+	// user.UportId
+	user.IsActive = true
+	user.AllowGitHook = false
+	user.AllowImportLocal = false
+	user.ProhibitLogin = false
 
 	// TODO: the follow and star table is lost
 	var err error
@@ -114,19 +125,12 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 	}
 	user.NumRepos = int(total)
 
-	// TODO: not sure
-	// user.UportId
-	user.IsActive = true
-	user.AllowGitHook = false
-	user.AllowImportLocal = false
-	user.ProhibitLogin = false
-
 	return nil
 }
 
 /// Push the user info to IPFS and record the new ipfsHash in the blockchain
 /// pushMode: 0 - register; 1 - update; 2 - delete;
-func PushUserInfo(contextUser *User， pushMode int) (err error) {
+func PushUserInfo(contextUser *User, pushMode int) (err error) {
 	// Do some checks
 	if contextUser.IsOrganization() {
 		return nil
@@ -199,7 +203,7 @@ func GetUserInfo(contextUser *User) (err error) {
 	}
 
 	newUser := new(User)
-	deTransferUserToDeUser(newDeUser, newUser)
+	transferUserToDeUser(newDeUser, newUser)
 
 	// Step4: write into the local database
 	// TODO:

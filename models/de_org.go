@@ -10,6 +10,36 @@ import (
 )
 
 // The org table in the IPFS
+type DeOrgUser struct {
+	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
+	IsPublic bool
+}
+
+func transferOrgUserToDeOrgUser(deOrgUser *DeOrgUser, orgUser *OrgUser) {
+	deOrgUser.Uid = orgUser.Uid
+	deOrgUser.IsPublic = orgUser.IsPublic
+}
+
+func transferDeOrgUserToOrgUser(deOrgUser *DeOrgUser, orgUser *OrgUser, org *User) error {
+	orgUser.Uid = deOrgUser.Uid
+	orgUser.IsPublic = deOrgUser.IsPublic
+
+	// TODO:
+	// orgUser.IsOwner =
+	// orgUser.OrgID =
+	// orgUser.ID
+
+	team := new(Team)
+	total, err := x.Where("org_id = ?", org.ID).Count(team)
+	if err != nil {
+		return fmt.Errorf("Can not get org teams: %v", err)
+	}
+	orgUser.NumTeams = int(total)
+
+	return nil
+}
+
+// The org table in the IPFS
 type DeOrg struct {
 	ID                 int64
 	Name               string `xorm:"UNIQUE NOT NULL"`
@@ -38,7 +68,7 @@ func transferOrgToDeOrg(deOrg *DeOrg, org *User) {
 	deOrg.UseCustomAvatar = org.UseCustomAvatar
 }
 
-func deTransferOrgToDeOrg(deOrg *DeOrg, org *User) error {
+func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	org.ID = deOrg.ID
 	org.Name = deOrg.Name
 	org.FullName = deOrg.FullName
@@ -105,6 +135,16 @@ func deTransferOrgToDeOrg(deOrg *DeOrg, org *User) error {
 	org.AllowGitHook = false
 	org.AllowImportLocal = false
 	org.ProhibitLogin = false
+
+	return nil
+}
+
+func PushOrgInfo() error {
+
+	return nil
+}
+
+func GetOrgInfo() error {
 
 	return nil
 }
