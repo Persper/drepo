@@ -32,6 +32,8 @@ type DeUser struct {
 	AvatarEmail        string `xorm:"NOT NULL"`
 	UseCustomAvatar    bool
 	//user.email_address.email[]
+	//star.repo_id[]
+	//watch.repo.id[]
 }
 
 func transferUserToDeUser(deUser *DeUser, user *User) {
