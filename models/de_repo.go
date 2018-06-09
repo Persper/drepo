@@ -14,14 +14,119 @@ import (
 
 // The repo table in the IPFS
 type DeRepo struct {
-	ID int64
+	ID            int64
+	OwnerID       int64  `xorm:"UNIQUE(s)"`
+	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name          string `xorm:"INDEX NOT NULL"`
+	Description   string
+	Website       string
+	DefaultBranch string
+	Size          int64 `xorm:"NOT NULL DEFAULT 0"`
+
+	IsPrivate bool
+	IsBare    bool
+	IsMirror  bool
+
+	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	EnableExternalWiki    bool
+	ExternalWikiURL       string
+	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
+	EnableExternalTracker bool
+	ExternalTrackerURL    string
+	ExternalTrackerFormat string
+	ExternalTrackerStyle  string
+	EnablePulls           bool `xorm:"NOT NULL DEFAULT true"`
+	PullsIgnoreWhitespace bool `xorm:"NOT NULL DEFAULT false"`
+	PullsAllowRebase      bool `xorm:"NOT NULL DEFAULT false"`
+
+	IsFork      bool `xorm:"NOT NULL DEFAULT false"`
+	ForkID      int64
+	CreatedUnix int64
+	UpdatedUnix int64
 }
 
 func transferRepoToDeRepo(deRepo *DeRepo, repo *Repository) {
+	deRepo.ID = repo.ID
+	deRepo.OwnerID = repo.OwnerID
+	deRepo.LowerName = repo.LowerName
+	deRepo.Name = repo.Name
+	deRepo.Description = repo.Description
+	deRepo.Website = repo.Website
+	deRepo.DefaultBranch = repo.DefaultBranch
+	deRepo.Size = repo.Size
 
+	deRepo.IsPrivate = repo.IsPrivate
+	deRepo.IsBare = repo.IsBare
+	deRepo.IsMirror = repo.IsMirror
+
+	deRepo.EnableWiki = repo.EnableWiki
+	deRepo.EnableExternalWiki = repo.EnableExternalWiki
+	deRepo.ExternalWikiURL = repo.ExternalWikiURL
+	deRepo.EnableIssues = repo.EnableIssues
+	deRepo.EnableExternalTracker = repo.EnableExternalTracker
+	deRepo.ExternalTrackerURL = repo.ExternalTrackerURL
+	deRepo.ExternalTrackerFormat = repo.ExternalTrackerFormat
+	deRepo.ExternalTrackerStyle = repo.ExternalTrackerStyle
+
+	deRepo.EnablePulls = repo.EnablePulls
+	deRepo.PullsAllowRebase = repo.PullsAllowRebase
+	deRepo.PullsIgnoreWhitespace = repo.PullsIgnoreWhitespace
+
+	deRepo.IsFork = repo.IsFork
+	deRepo.ForkID = repo.ForkID
+	deRepo.CreatedUnix = repo.CreatedUnix
+	deRepo.UpdatedUnix = repo.UpdatedUnix
 }
 
 func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
+	repo.ID = deRepo.ID
+	repo.OwnerID = deRepo.OwnerID
+	repo.LowerName = deRepo.LowerName
+	repo.Name = deRepo.Name
+	repo.Description = deRepo.Description
+	repo.Website = deRepo.Website
+	repo.DefaultBranch = deRepo.DefaultBranch
+	repo.Size = deRepo.Size
+
+	repo.IsPrivate = deRepo.IsPrivate
+	repo.IsBare = deRepo.IsBare
+	repo.IsMirror = deRepo.IsMirror
+
+	repo.EnableWiki = deRepo.EnableWiki
+	repo.EnableExternalWiki = deRepo.EnableExternalWiki
+	repo.ExternalWikiURL = deRepo.ExternalWikiURL
+	repo.EnableIssues = deRepo.EnableIssues
+	repo.EnableExternalTracker = deRepo.EnableExternalTracker
+	repo.ExternalTrackerURL = deRepo.ExternalTrackerURL
+	repo.ExternalTrackerFormat = deRepo.ExternalTrackerFormat
+	repo.ExternalTrackerStyle = deRepo.ExternalTrackerStyle
+
+	repo.EnablePulls = deRepo.EnablePulls
+	repo.PullsAllowRebase = deRepo.PullsAllowRebase
+	repo.PullsIgnoreWhitespace = deRepo.PullsIgnoreWhitespace
+
+	repo.IsFork = deRepo.IsFork
+	repo.ForkID = deRepo.ForkID
+	repo.CreatedUnix = deRepo.CreatedUnix
+	repo.UpdatedUnix = deRepo.UpdatedUnix
+
+	// TODO
+	/*type Repository struct {
+		NumWatches          int
+		NumStars            int
+		NumForks            int
+		NumIssues           int
+		NumClosedIssues     int
+		NumPulls            int
+		NumClosedPulls      int
+		NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
+		NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
+
+		// Advanced settings
+		AllowPublicWiki   bool
+		AllowPublicIssues bool
+	}*/
+
 	return nil
 }
 
