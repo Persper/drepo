@@ -21,7 +21,6 @@ type DeUser struct {
 	LoginType          LoginType
 	LoginSource        int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName          string
-	Type               UserType
 	Location           string
 	Website            string
 	Rands              string `xorm:"VARCHAR(10)"`
@@ -45,7 +44,6 @@ func transferUserToDeUser(deUser *DeUser, user *User) {
 	deUser.LoginType = user.LoginType
 	deUser.LoginSource = user.LoginSource
 	deUser.LoginName = user.LoginName
-	deUser.Type = user.Type
 	deUser.Location = user.Location
 	deUser.Website = user.Website
 	deUser.Rands = user.Rands
@@ -66,7 +64,6 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 	user.LoginType = deUser.LoginType
 	user.LoginSource = deUser.LoginSource
 	user.LoginName = deUser.LoginName
-	user.Type = deUser.Type
 	user.Location = deUser.Location
 	user.Website = deUser.Website
 	user.Rands = deUser.Rands
@@ -78,6 +75,7 @@ func deTransferUserToDeUser(deUser *DeUser, user *User) error {
 	user.UseCustomAvatar = deUser.UseCustomAvatar
 
 	// recovery deUser to user
+	user.Type = USER_TYPE_INDIVIDUAL
 	user.LowerName = strings.ToLower(user.Name)
 	user.UpdatedUnix = user.CreatedUnix
 	user.MaxRepoCreation = -1
@@ -190,10 +188,7 @@ func GetUserInfo(contextUser *User) (err error) {
 	newUser := new(User)
 	deTransferUserToDeUser(newDeUser, newUser)
 
-	// Step4: remove the isAdmin column
-	newUser.IsAdmin = false
-
-	// Step5: write into the local database
+	// Step4: write into the local database
 	// TODO:
 	CreateUser(newUser)
 
