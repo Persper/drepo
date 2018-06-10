@@ -225,7 +225,10 @@ func SettingsToBlockchainPost(c *context.Context) {
 	c.Title("settings.deGogs")
 	c.PageIs("SettingsToBlockchain")
 
-	// TODO
+	if err := models.PushUserAllInfos(c.User); err != nil {
+		c.ServerError("ToBlockchain", err)
+		return
+	}
 
 	c.SubURLRedirect("/user/settings/toBlockchain")
 }
