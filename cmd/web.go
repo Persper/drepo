@@ -238,6 +238,8 @@ func runWeb(c *cli.Context) error {
 		m.Combo("/applications").Get(user.SettingsApplications).
 			Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
+		m.Get("/toBlockchain", user.SettingsToBlockchain)
+		m.Post("/toBlockchain", user.SettingsToBlockchainPost)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(c *context.Context) {
 		c.Data["PageIsUserSettings"] = true

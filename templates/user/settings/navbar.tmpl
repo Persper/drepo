@@ -25,6 +25,9 @@
 		<a class="{{if .PageIsSettingsOrganizations}}active{{end}} item" href="{{AppSubURL}}/user/settings/organizations">
 			{{.i18n.Tr "settings.orgs"}}
 		</a>
+		<a class="{{if .PageIsSettingsToBlockchain}}active{{end}} item" href="{{AppSubURL}}/user/settings/toBlockchain">
+			{{.i18n.Tr "settings.deGogs"}}
+		</a>
 		<a class="{{if .PageIsSettingsApplications}}active{{end}} item" href="{{AppSubURL}}/user/settings/applications">
 			{{.i18n.Tr "settings.applications"}}
 		</a>

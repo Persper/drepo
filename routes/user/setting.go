@@ -39,6 +39,7 @@ const (
 	SETTINGS_REPOSITORIES              = "user/settings/repositories"
 	SETTINGS_ORGANIZATIONS             = "user/settings/organizations"
 	SETTINGS_APPLICATIONS              = "user/settings/applications"
+	SETTINGS_TOBLOCKCHAIN              = "user/settings/toBlockchain"
 	SETTINGS_DELETE                    = "user/settings/delete"
 	NOTIFICATION                       = "user/notification"
 )
@@ -212,6 +213,21 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	}
 
 	c.SubURLRedirect("/user/settings/password")
+}
+
+func SettingsToBlockchain(c *context.Context) {
+	c.Title("settings.deGogs")
+	c.PageIs("SettingsToBlockchain")
+	c.Success(SETTINGS_TOBLOCKCHAIN)
+}
+
+func SettingsToBlockchainPost(c *context.Context) {
+	c.Title("settings.deGogs")
+	c.PageIs("SettingsToBlockchain")
+
+	// TODO
+
+	c.SubURLRedirect("/user/settings/toBlockchain")
 }
 
 func SettingsEmails(c *context.Context) {
