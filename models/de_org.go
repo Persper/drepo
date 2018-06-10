@@ -5,7 +5,9 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
 )
 
@@ -15,27 +17,62 @@ type DeOrgUser struct {
 	IsPublic bool
 }
 
-func transferOrgUserToDeOrgUser(deOrgUser *DeOrgUser, orgUser *OrgUser) {
+func transferOrgUserToDeOrgUser(orgUser *OrgUser, deOrgUser *DeOrgUser) {
 	deOrgUser.Uid = orgUser.Uid
 	deOrgUser.IsPublic = orgUser.IsPublic
 }
 
-func transferDeOrgUserToOrgUser(deOrgUser *DeOrgUser, orgUser *OrgUser, org *User) error {
+func transferDeOrgUserToOrgUser(user *User, org *User, deOrgUser *DeOrgUser, orgUser *OrgUser) error {
 	orgUser.Uid = deOrgUser.Uid
 	orgUser.IsPublic = deOrgUser.IsPublic
-
+	orgUser.OrgID = org.ID
 	// TODO:
 	// orgUser.IsOwner =
-	// orgUser.OrgID =
 	// orgUser.ID
 
+	// ***** START: NumTeams *****
 	team := new(Team)
 	total, err := x.Where("org_id = ?", org.ID).Count(team)
 	if err != nil {
 		return fmt.Errorf("Can not get org teams: %v", err)
 	}
 	orgUser.NumTeams = int(total)
+	// ***** END: NumTeams *****
 
+	return nil
+}
+
+func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
+	if !canPushToBlockchain(user) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
+	// Step 1: Encode orgUser data into JSON format
+	deOrgUser := new(DeOrgUser)
+	transferOrgUserToDeOrgUser(orgUser, deOrgUser)
+	orgUser_data, err := json.Marshal(deOrgUser)
+	if err != nil {
+		return fmt.Errorf("Can not encode orgUser data: %v", err)
+	}
+
+	// Step 2: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", orgUser_data)
+	cmd := exec.Command("sh", "-c", c)
+	out, err2 := cmd.Output()
+	if err2 != nil {
+		return fmt.Errorf("Push OrgUser to IPFS: fails: %v", err2)
+	}
+	ipfsHash := strings.Split(string(out), " ")[1]
+
+	// Step4: Modify the ipfsHash in the smart contract
+	// TODO: setOrgUserInfo(ipfsHash)
+	ipfsHash = ipfsHash
+
+	return nil
+}
+
+func GetOrgUserInfo() error {
+	// TODO
 	return nil
 }
 
@@ -54,7 +91,7 @@ type DeOrg struct {
 	Description        string
 }
 
-func transferOrgToDeOrg(deOrg *DeOrg, org *User) {
+func transferOrgToDeOrg(org *User, deOrg *DeOrg) {
 	deOrg.ID = org.ID
 	deOrg.Name = org.Name
 	deOrg.FullName = org.FullName
@@ -89,45 +126,54 @@ func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	org.IsAdmin = false
 
 	// TODO: the follow and star table is lost
-	var err error
-	var total int64
-
+	// ***** START: NumFollowers *****
 	follow := new(Follow)
-	total, err = x.Where("follow_id = ?", org.ID).Count(follow)
+	total, err := x.Where("follow_id = ?", org.ID).Count(follow)
 	if err != nil {
 		return fmt.Errorf("Can not get org numfollowers: %v", err)
 	}
 	org.NumFollowers = int(total)
+	// ***** END: NumFollowers *****
 
+	// ***** START: NumFollowing *****
 	total, err = x.Where("user_id = ?", org.ID).Count(follow)
 	if err != nil {
 		return fmt.Errorf("Can not get org numfollowing: %v", err)
 	}
 	org.NumFollowing = int(total)
+	// ***** END: NumFollowing *****
 
 	// star is useless
+	// ***** START: NumStars *****
 	org.NumStars = 0
+	// ***** END: NumStars *****
 
+	// ***** START: NumRepos *****
 	repo := new(Repository)
 	total, err = x.Where("owner_id = ?", org.ID).Count(repo)
 	if err != nil {
 		return fmt.Errorf("Can not get org numRepos: %v", err)
 	}
 	org.NumRepos = int(total)
+	// ***** END: NumRepos *****
 
+	// ***** START: NumTeams *****
 	team := new(Team)
 	total, err = x.Where("org_id = ?", org.ID).Count(team)
 	if err != nil {
 		return fmt.Errorf("Can not get org teams: %v", err)
 	}
 	org.NumTeams = int(total)
+	// ***** END: NumTeams *****
 
+	// ***** START: NumMembers *****
 	teamUser := new(TeamUser)
 	total, err = x.Where("org_id = ?", org.ID).Count(teamUser)
 	if err != nil {
 		return fmt.Errorf("Can not get org team_user: %v", err)
 	}
 	org.NumMembers = int(total)
+	// ***** END: NumMembers *****
 
 	// TODO: not sure
 	// user.UportId
@@ -139,12 +185,36 @@ func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	return nil
 }
 
-func PushOrgInfo() error {
+func PushOrgInfo(user *User, org *User) error {
+	if !canPushToBlockchain(user) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
+	// Step 1: Encode org data into JSON format
+	deOrg := new(DeOrg)
+	transferOrgToDeOrg(org, deOrg)
+	org_data, err := json.Marshal(deOrg)
+	if err != nil {
+		return fmt.Errorf("Can not encode org data: %v", err)
+	}
+
+	// Step 2: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", org_data)
+	cmd := exec.Command("sh", "-c", c)
+	out, err2 := cmd.Output()
+	if err2 != nil {
+		return fmt.Errorf("Push org to IPFS: fails: %v", err2)
+	}
+	ipfsHash := strings.Split(string(out), " ")[1]
+
+	// Step4: Modify the ipfsHash in the smart contract
+	// TODO: setOrgUserInfo(ipfsHash)
+	ipfsHash = ipfsHash
 
 	return nil
 }
 
-func GetOrgInfo() error {
-
+func GetOrgInfo(user *User, org *User) error {
+	// TODO
 	return nil
 }

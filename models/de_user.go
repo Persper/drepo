@@ -185,85 +185,79 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 	user.AllowImportLocal = false
 	user.ProhibitLogin = false
 
-	// TODO: the follow and star table is lost
-	var err error
-	var total int64
-
+	// TODO: the watch and star table is lost
+	// ***** START: NumFollowers *****
 	follow := new(Follow)
-	total, err = x.Where("follow_id = ?", user.ID).Count(follow)
+	total, err := x.Where("follow_id = ?", user.ID).Count(follow)
 	if err != nil {
 		return fmt.Errorf("Can not get user numfollowers: %v", err)
 	}
 	user.NumFollowers = int(total)
+	// ***** END: NumFollowers *****
 
+	// ***** START: NumFollowing *****
 	total, err = x.Where("user_id = ?", user.ID).Count(follow)
 	if err != nil {
 		return fmt.Errorf("Can not get user numfollowing: %v", err)
 	}
 	user.NumFollowing = int(total)
+	// ***** END: NumFollowing *****
 
-	// star is useless
+	// ***** START: NumStars *****
 	user.NumStars = 0
+	// ***** END: NumStars *****
 
+	// ***** START: NumRepos *****
 	repo := new(Repository)
 	total, err = x.Where("owner_id = ?", user.ID).Count(repo)
 	if err != nil {
 		return fmt.Errorf("Can not get user numRepos: %v", err)
 	}
 	user.NumRepos = int(total)
+	// ***** END: NumRepos *****
 
 	return nil
 }
 
 /// Push the user info to IPFS and record the new ipfsHash in the blockchain
 /// pushMode: 0 - register; 1 - update; 2 - delete;
-func PushUserInfo(contextUser *User, pushMode int) (err error) {
+func PushUserInfo(user *User, pushMode int) (err error) {
 	// Do some checks
-	if contextUser.IsOrganization() {
+	if user.IsOrganization() {
 		return nil
 	}
-	if !canPushToBlockchain(contextUser) {
+	if !canPushToBlockchain(user) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Get the corresponding user.
-	var user *User
-	user = &User{ID: contextUser.ID}
-	hasUser, err := x.Get(user)
+	// Step1: register/deregister the user if it does not exist
+	if pushMode == 1 {
+		//err = registerName
+	}
+	if pushMode == 2 {
+		//err = deregisterName
+	}
+
+	// Step 2: Encode user data into JSON format
+	deUser := new(DeUser)
+	transferUserToDeUser(user, deUser)
+	user_data, err := json.Marshal(deUser)
 	if err != nil {
-		return fmt.Errorf("Can not get user data: %v", err)
+		return fmt.Errorf("Can not encode user data: %v", err)
 	}
 
-	if hasUser {
-		// Step1: register/deregister the user if it does not exist
-		if pushMode == 1 {
-			//err = registerName
-		}
-		if pushMode == 2 {
-			//err = deregisterName
-		}
-
-		// Step 2: Encode user data into JSON format
-		deUser := new(DeUser)
-		transferUserToDeUser(user, deUser)
-		user_data, err := json.Marshal(deUser)
-		if err != nil {
-			return fmt.Errorf("Can not encode user data: %v", err)
-		}
-
-		// Step 3: Put the encoded data into IPFS
-		c := fmt.Sprintf("echo '%s' | ipfs add ", user_data)
-		cmd := exec.Command("sh", "-c", c)
-		out, err2 := cmd.Output()
-		if err2 != nil {
-			return fmt.Errorf("Push User to IPFS: fails: %v", err2)
-		}
-		ipfsHash := strings.Split(string(out), " ")[1]
-
-		// Step4: Modify the ipfsHash in the smart contract
-		// TODO: setUserInfo(ipfsHash)
-		ipfsHash = ipfsHash
+	// Step 3: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", user_data)
+	cmd := exec.Command("sh", "-c", c)
+	out, err2 := cmd.Output()
+	if err2 != nil {
+		return fmt.Errorf("Push User to IPFS: fails: %v", err2)
 	}
+	ipfsHash := strings.Split(string(out), " ")[1]
+
+	// Step4: Modify the ipfsHash in the smart contract
+	// TODO: setUserInfo(ipfsHash)
+	ipfsHash = ipfsHash
 
 	return nil
 }
@@ -304,8 +298,41 @@ func PushUserAllInfos(contextUser *User) (err error) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// check update or create
-	PushUserInfo(contextUser, 1)
+	// Step0: get the corresponding user.
+	var user *User
+	user = &User{ID: contextUser.ID}
+	_, err = x.Get(user)
+	if err != nil {
+		return fmt.Errorf("Can not get user data: %v", err)
+	}
+
+	// Step1: push user: check update or create
+	if err := PushUserInfo(user, 1); err != nil {
+		return fmt.Errorf("Can not push userInfo: %v", err)
+	}
+
+	// Step2: push the related orgs
+	orgUsers := make([]OrgUser, 0)
+	if err = x.Find(&orgUsers, &OrgUser{Uid: user.ID}); err != nil {
+		return fmt.Errorf("Can not get orgUsers of the user: %v", err)
+	}
+	for i := range orgUsers {
+		var org *User
+		org = &User{ID: orgUsers[i].ID}
+		hasOrg, err := x.Get(org)
+		if hasOrg {
+			if err != nil {
+				return fmt.Errorf("Can not get org data: %v", err)
+			}
+			if err = PushOrgInfo(user, org); err != nil {
+				return fmt.Errorf("Can not push org data: %v", err)
+			}
+			// TODO: only owner?
+			if err = PushOrgUserInfo(user, org, &orgUsers[i]); err != nil {
+				return fmt.Errorf("Can not push orgUser data: %v", err)
+			}
+		}
+	}
 
 	return nil
 }
