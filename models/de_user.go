@@ -331,6 +331,17 @@ func PushUserAllInfos(contextUser *User) (err error) {
 			if err = PushOrgUserInfo(user, org, &orgUsers[i]); err != nil {
 				return fmt.Errorf("Can not push orgUser data: %v", err)
 			}
+
+			teams := make([]Team, 0)
+			if err = x.Find(&teams, &Team{OrgID: org.ID}); err != nil {
+				return fmt.Errorf("Can not get teams of the user: %v", err)
+			}
+
+			for j := range teams {
+				if err = PushTeamInfo(user, &teams[j]); err != nil {
+					return fmt.Errorf("Can not push team data: %v", err)
+				}
+			}
 		}
 	}
 
