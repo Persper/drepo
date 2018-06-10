@@ -11,6 +11,36 @@ import (
 	"strings"
 )
 
+type DeTeamRepo struct {
+	RepoID int64 `xorm:"UNIQUE(s)"`
+}
+
+func transferTeamRepoToDeTeamRepo(teamRepo *TeamRepo, deTeamRepo *DeTeamRepo) {
+	deTeamRepo.RepoID = teamRepo.RepoID
+}
+
+func transferDeTeamRepoToTeamRepo(org *User, team *Team, repo *Repository, deTeamRepo *DeTeamRepo, teamRepo *TeamRepo) {
+	// TODO: teamRepo.ID
+	teamRepo.OrgID = org.ID
+	teamRepo.TeamID = team.ID
+	teamRepo.RepoID = repo.ID
+}
+
+type DeTeamUser struct {
+	UID int64 `xorm:"UNIQUE(s)"`
+}
+
+func transferTeamUserToDeTeamUser(teamUser *TeamUser, deTeamUser *DeTeamUser) {
+	deTeamUser.UID = teamUser.UID
+}
+
+func transferDeTeamUserToTeamUser(org *User, team *Team, user *User, teamUser *TeamUser, deTeamUser *DeTeamUser) {
+	// TODO: teamUser.ID
+	teamUser.OrgID = org.ID
+	teamUser.TeamID = team.ID
+	teamUser.UID = user.ID
+}
+
 // The Team table in the IPFS
 type DeTeam struct {
 	ID          int64

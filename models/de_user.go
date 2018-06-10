@@ -357,10 +357,10 @@ func PushUserAllInfos(contextUser *User) (err error) {
 		var org *User
 		org = &User{ID: orgUsers[i].ID}
 		hasOrg, err := x.Get(org)
+		if err != nil {
+			return fmt.Errorf("Can not get org data: %v", err)
+		}
 		if hasOrg {
-			if err != nil {
-				return fmt.Errorf("Can not get org data: %v", err)
-			}
 			if err = PushOrgInfo(user, org); err != nil {
 				return fmt.Errorf("Can not push org data: %v", err)
 			}
@@ -378,6 +378,25 @@ func PushUserAllInfos(contextUser *User) (err error) {
 				if err = PushTeamInfo(user, &teams[j]); err != nil {
 					return fmt.Errorf("Can not push team data: %v", err)
 				}
+			}
+		}
+	}
+
+	// Step3: push the related repo
+	accesses := make([]Access, 0)
+	if err = x.Find(&accesses, &Access{UserID: user.ID}); err != nil {
+		return fmt.Errorf("Can not get accesses of the user: %v", err)
+	}
+	for i := range accesses {
+		var repo *Repository
+		repo = &Repository{ID: accesses[i].RepoID}
+		hasRepo, err := x.Get(repo)
+		if err != nil {
+			return fmt.Errorf("Can not get repo data: %v", err)
+		}
+		if hasRepo {
+			if err = PushRepoInfo(user, repo); err != nil {
+
 			}
 		}
 	}
