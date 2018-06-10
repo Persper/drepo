@@ -13,24 +13,18 @@ import (
 
 // DeEmailAdresses is the list of all email addresses of a user that remove is_primary
 type DeEmailAddress struct {
-	ID          int64
-	UID         int64  `xorm:"INDEX NOT NULL"`
-	Email       string `xorm:"UNIQUE NOT NULL"`
-	IsActivated bool
+	Email string `xorm:"UNIQUE NOT NULL"`
 }
 
 func transferEmailAddrToDeEmailAddr(emailAddr *EmailAddress, deEmailAddr *DeEmailAddress) {
-	deEmailAddr.ID = emailAddr.ID
-	deEmailAddr.UID = emailAddr.UID
 	deEmailAddr.Email = emailAddr.Email
-	deEmailAddr.IsActivated = emailAddr.IsActivated
 }
 
 func transferDeEmailAddrToEmailAddr(user *User, deEmailAddr *DeEmailAddress, emailAddr *EmailAddress) {
-	emailAddr.ID = deEmailAddr.ID
-	emailAddr.UID = deEmailAddr.UID
+	//emailAddr.ID
+	emailAddr.UID = user.ID
 	emailAddr.Email = deEmailAddr.Email
-	emailAddr.IsActivated = deEmailAddr.IsActivated
+	emailAddr.IsActivated = true
 	if emailAddr.Email == user.Email {
 		emailAddr.IsPrimary = true
 	} else {
