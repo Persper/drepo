@@ -11,6 +11,35 @@ import (
 	"strings"
 )
 
+type DeStar struct {
+	RepoID int64 `xorm:"UNIQUE(s)"`
+}
+
+func transferStarToDeStar(star *Star, deStar *DeStar) {
+	deStar.RepoID = star.RepoID
+}
+
+func transferDeStarToStar(user *User, deStar *DeStar, star *Star) {
+	// TODO: star.ID
+	star.UID = user.ID
+	star.RepoID = deStar.RepoID
+}
+
+// DeWatch is connection request for receiving repository notification.
+type DeWatch struct {
+	RepoID int64 `xorm:"UNIQUE(watch)"`
+}
+
+func transferWatchToDeWatch(watch *Watch, deWatch *DeWatch) {
+	deWatch.RepoID = watch.RepoID
+}
+
+func transferDeWatchToWatch(user *User, deWatch *DeWatch, watch *Watch) {
+	// TODO: watch.ID
+	watch.UserID = user.ID
+	watch.RepoID = deWatch.RepoID
+}
+
 // DeEmailAdresses is the list of all email addresses of a user that remove is_primary
 type DeEmailAddress struct {
 	Email string `xorm:"UNIQUE NOT NULL"`
@@ -87,8 +116,8 @@ type DeUser struct {
 	UseCustomAvatar    bool
 	EmailAddr          []DeEmailAddress `xorm:"-"`
 	PubKey             []DePublicKey    `xorm:"-"`
-	//star.repo_id[]
-	//watch.repo.id[]
+	StarRepoID         []int64          `xorm:"-"`
+	WatchRepoID        []int64          `xorm:"-"`
 	//repo_blacklist
 	//team_blacklist
 	//org_blacklist
@@ -137,6 +166,18 @@ func transferUserToDeUser(user *User, deUser *DeUser) error {
 		deUser.PubKey = append(deUser.PubKey, *dePublicKey)
 	}
 	// ***** END: PubKey[] *****
+
+	// ***** START: Star[] *****
+	if err := x.Table("star").Cols("repo_id").Find(&deUser.StarRepoID); err != nil {
+		return fmt.Errorf("Can not encode star data: %v", err)
+	}
+	// ***** END: Star[] *****
+
+	// ***** START: Watch[] *****
+	if err := x.Table("watch").Cols("repo_id").Find(&deUser.WatchRepoID); err != nil {
+		return fmt.Errorf("Can not encode watch data: %v", err)
+	}
+	// ***** END: Watch[] *****
 
 	return nil
 }
@@ -209,6 +250,8 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 	}
 	user.NumRepos = int(total)
 	// ***** END: NumRepos *****
+
+	// Recover: star and watch
 
 	return nil
 }
