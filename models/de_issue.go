@@ -4,9 +4,79 @@
 
 package models
 
-import ()
+import (
+	"encoding/json"
+	"fmt"
+	"os/exec"
+	"strings"
+)
 
-// The issue table in the IPFS
+type DeIssueUser struct {
+	UID         int64 `xorm:"INDEX"` // User ID.
+	IsRead      bool
+	IsAssigned  bool
+	IsMentioned bool
+	IsPoster    bool
+	IsClosed    bool
+}
+
+func transferIssueUserToDeIssueUser(issueUser *IssueUser, deIssueUser *DeIssueUser) {
+	deIssueUser.UID = issueUser.UID
+	deIssueUser.IsRead = issueUser.IsRead
+	deIssueUser.IsAssigned = issueUser.IsAssigned
+	deIssueUser.IsMentioned = issueUser.IsMentioned
+	deIssueUser.IsPoster = issueUser.IsPoster
+	deIssueUser.IsClosed = issueUser.IsClosed
+}
+
+func transferDeIssueUserToIssueUser(issue *Issue, repo *Repository, milestone *Milestone,
+	issueUser *IssueUser, deIssueUser *DeIssueUser) {
+
+	// issueUser.ID
+	issueUser.UID = deIssueUser.UID
+	issueUser.IssueID = issue.ID
+	issueUser.RepoID = repo.ID
+	issueUser.MilestoneID = milestone.ID
+	issueUser.IsRead = deIssueUser.IsRead
+	issueUser.IsAssigned = deIssueUser.IsAssigned
+	issueUser.IsMentioned = deIssueUser.IsMentioned
+	issueUser.IsPoster = deIssueUser.IsPoster
+	issueUser.IsClosed = deIssueUser.IsClosed
+}
+
+type DeComment struct {
+	Type        CommentType
+	PosterID    int64
+	Line        int64
+	Content     string `xorm:"TEXT"`
+	CreatedUnix int64
+	UpdatedUnix int64
+	CommitSHA   string `xorm:"VARCHAR(40)"`
+}
+
+func transferCommentToDeComment(comment *Comment, deComment *DeComment) {
+	deComment.Type = comment.Type
+	deComment.PosterID = comment.PosterID
+	deComment.Line = comment.Line
+	deComment.Content = comment.Content
+	deComment.CreatedUnix = comment.CreatedUnix
+	deComment.UpdatedUnix = comment.UpdatedUnix
+	deComment.CommitSHA = comment.CommitSHA
+}
+
+func transferDeCommentToComment(issue *Issue, deComment *DeComment, comment *Comment) {
+	// comment.ID
+	comment.Type = deComment.Type
+	comment.PosterID = deComment.PosterID
+	comment.IssueID = issue.ID
+	// comment.CommitID
+	comment.Line = deComment.Line
+	comment.Content = deComment.Content
+	comment.CreatedUnix = deComment.CreatedUnix
+	comment.UpdatedUnix = deComment.UpdatedUnix
+	comment.CommitSHA = deComment.CommitSHA
+}
+
 type DeIssue struct {
 	Index        int64 `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	PosterID     int64
@@ -20,9 +90,11 @@ type DeIssue struct {
 	DeadlineUnix int64
 	CreatedUnix  int64
 	UpdatedUnix  int64
+	Comments     []DeComment   `xorm:"-"`
+	IssueUsers   []DeIssueUser `xorm:"-"`
 }
 
-func transferIssueToDeIssue(deIssue *DeIssue, issue *Issue) {
+func transferIssueToDeIssue(issue *Issue, deIssue *DeIssue) error {
 	deIssue.Index = issue.Index
 	deIssue.PosterID = issue.PosterID
 	deIssue.Title = issue.Title
@@ -35,9 +107,37 @@ func transferIssueToDeIssue(deIssue *DeIssue, issue *Issue) {
 	deIssue.DeadlineUnix = issue.DeadlineUnix
 	deIssue.CreatedUnix = issue.CreatedUnix
 	deIssue.UpdatedUnix = issue.UpdatedUnix
+
+	// ***** START: Comment[] *****
+	comments := make([]Comment, 0)
+	if err := x.Find(&comments, &Comment{IssueID: issue.ID}); err != nil {
+		return fmt.Errorf("Can not get comments of the user: %v", err)
+	}
+	for i := range comments {
+		deComment := new(DeComment)
+		transferCommentToDeComment(&comments[i], deComment)
+		deIssue.Comments = append(deIssue.Comments, *deComment)
+	}
+	// ***** END: Comment[] *****
+
+	// ***** START: IssueUser[] *****
+	issueUsers := make([]IssueUser, 0)
+	if err := x.Find(&issueUsers, &IssueUser{IssueID: issue.ID}); err != nil {
+		return fmt.Errorf("Can not get issueUsers of the user: %v", err)
+	}
+	for i := range issueUsers {
+		deIssueUser := new(DeIssueUser)
+		transferIssueUserToDeIssueUser(&issueUsers[i], deIssueUser)
+		deIssue.IssueUsers = append(deIssue.IssueUsers, *deIssueUser)
+	}
+	// ***** END: IssueUser[] *****
+
+	return nil
 }
 
-func transferDeIssueToIssue(deIssue *DeIssue, issue *Issue) error {
+func transferDeIssueToIssue(repo *Repository, deIssue *DeIssue, issue *Issue) error {
+	// issue.ID
+	issue.RepoID = repo.ID
 	issue.Index = deIssue.Index
 	issue.PosterID = deIssue.PosterID
 	issue.Title = deIssue.Title
@@ -51,87 +151,44 @@ func transferDeIssueToIssue(deIssue *DeIssue, issue *Issue) error {
 	issue.CreatedUnix = deIssue.CreatedUnix
 	issue.UpdatedUnix = deIssue.UpdatedUnix
 
+	// TODO: NumComments
+
+	// TODO: comment
+
+	// TODO: issueUser
 	return nil
 }
 
-// The pull table in the IPFS
-type DePull struct {
-	Type   PullRequestType
-	Status PullRequestStatus
+func PushIssueInfo(user *User, issue *Issue) error {
+	if !canPushToBlockchain(user) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
 
-	IssueID int64 `xorm:"INDEX"`
-	Index   int64
+	// Step 1: Encode org data into JSON format
+	deIssue := new(DeIssue)
+	transferIssueToDeIssue(issue, deIssue)
+	issue_data, err := json.Marshal(deIssue)
+	if err != nil {
+		return fmt.Errorf("Can not encode issue data: %v", err)
+	}
 
-	HeadRepoID   int64
-	HeadUserName string
-	HeadBranch   string
-	BaseBranch   string
-	MergeBase    string `xorm:"VARCHAR(40)"`
+	// Step 2: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", issue_data)
+	cmd := exec.Command("sh", "-c", c)
+	out, err2 := cmd.Output()
+	if err2 != nil {
+		return fmt.Errorf("Push issue to IPFS: fails: %v", err2)
+	}
+	ipfsHash := strings.Split(string(out), " ")[1]
 
-	HasMerged      bool
-	MergedCommitID string `xorm:"VARCHAR(40)"`
-	MergerID       int64
-	MergedUnix     int64
-}
-
-func transferPullToDePull(dePull *DePull, pull *PullRequest) {
-	dePull.Type = pull.Type
-	dePull.Status = pull.Status
-	dePull.IssueID = pull.IssueID
-	dePull.Index = pull.Index
-	dePull.HeadRepoID = pull.HeadRepoID
-	dePull.HeadUserName = pull.HeadUserName
-	dePull.HeadBranch = pull.HeadBranch
-	dePull.BaseBranch = pull.BaseBranch
-	dePull.MergeBase = pull.MergeBase
-	dePull.HasMerged = pull.HasMerged
-	dePull.MergedCommitID = pull.MergedCommitID
-	dePull.MergerID = pull.MergerID
-	dePull.MergedUnix = pull.MergedUnix
-}
-
-func transferDePullToPull(dePull *DePull, pull *PullRequest) error {
-	pull.Type = dePull.Type
-	pull.Status = dePull.Status
-	pull.IssueID = dePull.IssueID
-	pull.Index = dePull.Index
-	pull.HeadRepoID = dePull.HeadRepoID
-	pull.HeadUserName = dePull.HeadUserName
-	pull.HeadBranch = dePull.HeadBranch
-	pull.BaseBranch = dePull.BaseBranch
-	pull.MergeBase = dePull.MergeBase
-	pull.HasMerged = dePull.HasMerged
-	pull.MergedCommitID = dePull.MergedCommitID
-	pull.MergerID = dePull.MergerID
-	pull.MergedUnix = dePull.MergedUnix
+	// Step4: Modify the ipfsHash in the smart contract
+	// TODO: setIssueInfo(ipfsHash)
+	ipfsHash = ipfsHash
 
 	return nil
 }
 
-// The pull table in the IPFS
-type DeBranch struct {
-	Name               string `xorm:"UNIQUE(protect_branch)"`
-	Protected          bool
-	RequirePullRequest bool
-	EnableWhitelist    bool
-	WhitelistUserIDs   string `xorm:"TEXT"`
-	WhitelistTeamIDs   string `xorm:"TEXT"`
-}
-
-func transferBranchToDeBranch(deBranch *DeBranch, branch *ProtectBranch) {
-	deBranch.Name = branch.Name
-	deBranch.Protected = branch.Protected
-	deBranch.RequirePullRequest = branch.RequirePullRequest
-	deBranch.EnableWhitelist = branch.EnableWhitelist
-	deBranch.WhitelistUserIDs = branch.WhitelistUserIDs
-	deBranch.WhitelistTeamIDs = branch.WhitelistTeamIDs
-}
-
-func transferDeBranchToBranch(deBranch *DeBranch, branch *ProtectBranch) {
-	branch.Name = deBranch.Name
-	branch.Protected = deBranch.Protected
-	branch.RequirePullRequest = deBranch.RequirePullRequest
-	branch.EnableWhitelist = deBranch.EnableWhitelist
-	branch.WhitelistUserIDs = deBranch.WhitelistUserIDs
-	branch.WhitelistTeamIDs = deBranch.WhitelistTeamIDs
+func GetIssueInfo(user *User, org *User) error {
+	// TODO
+	return nil
 }

@@ -414,23 +414,3 @@ func GetRepoContent(modifier *User) (err error) {
 
 	return nil
 }
-
-// Push the repo collaborations to IPFS and record the new ipfsHash in the blockchain
-func PushRepoCollaboration(owner *User, repo *Repository) (err error) {
-	return nil
-}
-
-// Get the new ipfsHash from the blockchain and get the repo collaborations from IPFS
-func GetRepoCollaboration(oowner *User, repo *Repository) (err error) {
-	return nil
-}
-
-// Push the repo accesses to IPFS and record the new ipfsHash in the blockchain
-func PushRepoAccess(owner *User, repo *Repository) (err error) {
-	return nil
-}
-
-// Get the new ipfsHash from the blockchain and get the repo accesses from IPFS
-func GetRepoAccess(owner *User, repo *Repository) (err error) {
-	return nil
-}

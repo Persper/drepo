@@ -396,7 +396,18 @@ func PushUserAllInfos(contextUser *User) (err error) {
 		}
 		if hasRepo {
 			if err = PushRepoInfo(user, repo); err != nil {
+				return fmt.Errorf("Can not push repo data: %v", err)
+			}
+		}
 
+		issues := make([]Issue, 0)
+		if err = x.Find(&issues, &Issue{RepoID: accesses[i].RepoID}); err != nil {
+			return fmt.Errorf("Can not get issues of the repo: %v", err)
+		}
+
+		for j := range issues {
+			if err = PushIssueInfo(user, &issues[j]); err != nil {
+				return fmt.Errorf("Can not push issue data: %v", err)
 			}
 		}
 	}
