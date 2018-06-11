@@ -369,7 +369,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 			}
 
 			pulls := make([]PullRequest, 0)
-			if err = x.Find(&pulls, &PullRequest{IssueID: issues[i].ID}); err != nil {
+			if err = x.Find(&pulls, &PullRequest{IssueID: issues[j].ID}); err != nil {
 				return fmt.Errorf("Can not get pulls of the repo: %v", err)
 			}
 
@@ -475,7 +475,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 			}
 
 			pulls := make([]PullRequest, 0)
-			if err = x.Find(&pulls, &PullRequest{IssueID: issues[i].ID}); err != nil {
+			if err = x.Find(&pulls, &PullRequest{IssueID: issues[j].ID}); err != nil {
 				return fmt.Errorf("Can not get pulls of the repo: %v", err)
 			}
 

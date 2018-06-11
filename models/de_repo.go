@@ -450,3 +450,56 @@ func GetRepoContentByDegit(modifier *User) (err error) {
 
 	return nil
 }
+
+/// Push the repo info and all related tables to IPFS
+func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
+	if !canPushToBlockchain(contextUser) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
+	// Step0: get the corresponding user.
+	var user *User
+	user = &User{ID: contextUser.ID}
+	_, err = x.Get(user)
+	if err != nil {
+		return fmt.Errorf("Can not get user data: %v", err)
+	}
+
+	// Step1: push the repo
+	if err = PushRepoInfo(user, repo); err != nil {
+		return fmt.Errorf("Can not push repo data: %v", err)
+	}
+
+	issues := make([]Issue, 0)
+	if err = x.Find(&issues, &Issue{RepoID: repo.ID}); err != nil {
+		return fmt.Errorf("Can not get issues of the repo: %v", err)
+	}
+	for j := range issues {
+		if err = PushIssueInfo(user, &issues[j]); err != nil {
+			return fmt.Errorf("Can not push issue data: %v", err)
+		}
+
+		pulls := make([]PullRequest, 0)
+		if err = x.Find(&pulls, &PullRequest{IssueID: issues[j].ID}); err != nil {
+			return fmt.Errorf("Can not get pulls of the repo: %v", err)
+		}
+
+		for k := range pulls {
+			if err = PushPullInfo(user, &pulls[k]); err != nil {
+				return fmt.Errorf("Can not push pull_request data: %v", err)
+			}
+		}
+	}
+
+	branches := make([]ProtectBranch, 0)
+	if err = x.Find(&branches, &ProtectBranch{RepoID: repo.ID}); err != nil {
+		return fmt.Errorf("Can not get branches of the repo: %v", err)
+	}
+	for j := range branches {
+		if err = PushBranchInfo(user, &branches[j]); err != nil {
+			return fmt.Errorf("Can not push branch data: %v", err)
+		}
+	}
+
+	return nil
+}

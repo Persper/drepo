@@ -643,11 +643,10 @@ func SettingsToBlockchainPost(c *context.Context) {
 	c.Title("settings.deGogs")
 	c.PageIs("SettingsToBlockchain")
 
-	/*if err := models.PushUserAndOwnedRepos(c.User); err != nil {
+	if err := models.PushRepoAndRelatedTables(c.User, c.Repo.Repository); err != nil {
 		c.ServerError("ToBlockchain", err)
 		return
-	}*/
+	}
 
-	//c.SubURLRedirect("/repo/settings/toBlockchain")
 	c.Redirect(c.Repo.RepoLink + "/settings/toBlockchain")
 }
