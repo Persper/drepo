@@ -409,6 +409,28 @@ func PushUserAllInfos(contextUser *User) (err error) {
 			if err = PushIssueInfo(user, &issues[j]); err != nil {
 				return fmt.Errorf("Can not push issue data: %v", err)
 			}
+
+			pulls := make([]PullRequest, 0)
+			if err = x.Find(&pulls, &PullRequest{IssueID: issues[i].ID}); err != nil {
+				return fmt.Errorf("Can not get pulls of the repo: %v", err)
+			}
+
+			for k := range pulls {
+				if err = PushPullInfo(user, &pulls[k]); err != nil {
+					return fmt.Errorf("Can not push pull_request data: %v", err)
+				}
+			}
+		}
+
+		branches := make([]ProtectBranch, 0)
+		if err = x.Find(&branches, &ProtectBranch{RepoID: accesses[i].RepoID}); err != nil {
+			return fmt.Errorf("Can not get branches of the repo: %v", err)
+		}
+
+		for j := range branches {
+			if err = PushBranchInfo(user, &branches[j]); err != nil {
+				return fmt.Errorf("Can not push branch data: %v", err)
+			}
 		}
 	}
 

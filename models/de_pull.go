@@ -4,9 +4,14 @@
 
 package models
 
-import ()
+import (
+	"encoding/json"
+	"fmt"
+	"os/exec"
+	"strings"
+)
 
-// The pull table in the IPFS
+// The pull request table in the IPFS
 type DePull struct {
 	Type   PullRequestType
 	Status PullRequestStatus
@@ -26,7 +31,7 @@ type DePull struct {
 	MergedUnix     int64
 }
 
-func transferPullToDePull(dePull *DePull, pull *PullRequest) {
+func transferPullToDePull(pull *PullRequest, dePull *DePull) {
 	dePull.Type = pull.Type
 	dePull.Status = pull.Status
 	dePull.IssueID = pull.IssueID
@@ -43,6 +48,8 @@ func transferPullToDePull(dePull *DePull, pull *PullRequest) {
 }
 
 func transferDePullToPull(dePull *DePull, pull *PullRequest) error {
+	// pull.ID =
+	// pull.BaseRepoID =
 	pull.Type = dePull.Type
 	pull.Status = dePull.Status
 	pull.IssueID = dePull.IssueID
@@ -57,5 +64,39 @@ func transferDePullToPull(dePull *DePull, pull *PullRequest) error {
 	pull.MergerID = dePull.MergerID
 	pull.MergedUnix = dePull.MergedUnix
 
+	return nil
+}
+
+func PushPullInfo(user *User, pull *PullRequest) error {
+	if !canPushToBlockchain(user) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
+	// Step 1: Encode org data into JSON format
+	dePull := new(DePull)
+	transferPullToDePull(pull, dePull)
+	pull_data, err := json.Marshal(dePull)
+	if err != nil {
+		return fmt.Errorf("Can not encode pull_request data: %v", err)
+	}
+
+	// Step 2: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", pull_data)
+	cmd := exec.Command("sh", "-c", c)
+	out, err2 := cmd.Output()
+	if err2 != nil {
+		return fmt.Errorf("Push pull_request to IPFS: fails: %v", err2)
+	}
+	ipfsHash := strings.Split(string(out), " ")[1]
+
+	// Step4: Modify the ipfsHash in the smart contract
+	// TODO: setPullInfo(ipfsHash)
+	ipfsHash = ipfsHash
+
+	return nil
+}
+
+func GetPullInfo(user *User, pull *PullRequest) error {
+	// TODO
 	return nil
 }
