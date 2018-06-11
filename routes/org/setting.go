@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS  = "org/settings/options"
-	SETTINGS_DELETE   = "org/settings/delete"
-	SETTINGS_WEBHOOKS = "org/settings/webhooks"
+	SETTINGS_OPTIONS         = "org/settings/options"
+	SETTINGS_DELETE          = "org/settings/delete"
+	SETTINGS_WEBHOOKS        = "org/settings/webhooks"
+	SETTINGS_ORGTOBLOCKCHAIN = "org/settings/toBlockchain"
 )
 
 func Settings(c *context.Context) {
@@ -136,6 +137,24 @@ func SettingsDelete(c *context.Context) {
 	}
 
 	c.Success(SETTINGS_DELETE)
+}
+
+func SettingsToBlockchain(c *context.Context) {
+	c.Title("settings.deGogs")
+	c.PageIs("SettingsToBlockchain")
+	c.Success(SETTINGS_ORGTOBLOCKCHAIN)
+}
+
+func SettingsToBlockchainPost(c *context.Context) {
+	c.Title("settings.deGogs")
+	c.PageIs("SettingsToBlockchain")
+
+	if err := models.PushOrgAndRelatedTables(c.User, c.Org.Organization); err != nil {
+		c.ServerError("ToBlockchain", err)
+		return
+	}
+
+	c.Redirect(c.Org.OrgLink + "/settings/toBlockchain")
 }
 
 func Webhooks(c *context.Context) {

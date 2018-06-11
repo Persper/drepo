@@ -399,6 +399,9 @@ func runWeb(c *cli.Context) error {
 					m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.DingtalkHooksEditPost)
 				})
 
+				m.Get("/toBlockchain", org.SettingsToBlockchain)
+				m.Post("/toBlockchain", org.SettingsToBlockchainPost)
+
 				m.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 

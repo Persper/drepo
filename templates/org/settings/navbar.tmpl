@@ -7,6 +7,9 @@
 		<a class="{{if .PageIsSettingsHooks}}active{{end}} item" href="{{.OrgLink}}/settings/hooks">
 			{{.i18n.Tr "repo.settings.hooks"}}
 		</a>
+		<a class="{{if .PageIsSettingsToBlockchain}}active{{end}} item" href="{{.OrgLink}}/settings/toBlockchain">
+			{{.i18n.Tr "settings.de_gogs"}}
+		</a>
 		<a class="{{if .PageIsSettingsDelete}}active{{end}} item" href="{{.OrgLink}}/settings/delete">
 			{{.i18n.Tr "org.settings.delete"}}
 		</a>
