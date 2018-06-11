@@ -470,6 +470,9 @@ func runWeb(c *cli.Context) error {
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
+			m.Get("/toBlockchain", repo.SettingsToBlockchain)
+			m.Post("/toBlockchain", repo.SettingsToBlockchainPost)
+
 		}, func(c *context.Context) {
 			c.Data["PageIsSettings"] = true
 		})

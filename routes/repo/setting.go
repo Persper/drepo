@@ -29,6 +29,7 @@ const (
 	SETTINGS_GITHOOKS         = "repo/settings/githooks"
 	SETTINGS_GITHOOK_EDIT     = "repo/settings/githook_edit"
 	SETTINGS_DEPLOY_KEYS      = "repo/settings/deploy_keys"
+	SETTINGS_REPOTOBLOCKCHAIN = "repo/settings/toBlockchain"
 )
 
 func Settings(c *context.Context) {
@@ -630,4 +631,23 @@ func DeleteDeployKey(c *context.Context) {
 	c.JSON(200, map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/settings/keys",
 	})
+}
+
+func SettingsToBlockchain(c *context.Context) {
+	c.Title("settings.deGogs")
+	c.PageIs("SettingsToBlockchain")
+	c.Success(SETTINGS_REPOTOBLOCKCHAIN)
+}
+
+func SettingsToBlockchainPost(c *context.Context) {
+	c.Title("settings.deGogs")
+	c.PageIs("SettingsToBlockchain")
+
+	/*if err := models.PushUserAndOwnedRepos(c.User); err != nil {
+		c.ServerError("ToBlockchain", err)
+		return
+	}*/
+
+	//c.SubURLRedirect("/repo/settings/toBlockchain")
+	c.Redirect(c.Repo.RepoLink + "/settings/toBlockchain")
 }
