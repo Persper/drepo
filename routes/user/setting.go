@@ -225,7 +225,7 @@ func SettingsToBlockchainPost(c *context.Context) {
 	c.Title("settings.deGogs")
 	c.PageIs("SettingsToBlockchain")
 
-	if err := models.PushUserAllInfos(c.User); err != nil {
+	if err := models.PushUserAndOwnedRepos(c.User); err != nil {
 		c.ServerError("ToBlockchain", err)
 		return
 	}

@@ -758,10 +758,10 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		}
 
 		// Push the repo content to the IPFS
-		err = PushRepoContent(owner, repoPath)
+		/*err = PushRepoContent(owner, repoPath)
 		if err != nil {
-			//return err
-		}
+			return err
+		}*/
 	}
 
 	if opts.IsMirror {
@@ -976,10 +976,10 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		}
 
 		// Push the repo content to the IPFS
-		err = PushRepoContent(doer, repoPath)
+		/*err = PushRepoContent(doer, repoPath)
 		if err != nil {
 			return err
-		}
+		}*/
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
@@ -2347,10 +2347,10 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		//return err
 	}
 	// Push the repo content to the IPFS
-	err = PushRepoContent(owner, repoPath)
+	/*err = PushRepoContent(owner, repoPath)
 	if err != nil {
-		//return err
-	}
+		return err
+	}*/
 
 	_, stderr, err = process.ExecDir(-1,
 		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),

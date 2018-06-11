@@ -598,7 +598,7 @@ func CreateUser(u *User) (err error) {
 	}
 
 	// Push new user data to the blockchain
-	err = PushUserInfo(u, 0)
+	/*err = PushUserInfo(u, 0)
 	if err != nil {
 		sess.Rollback()
 		return err
@@ -608,7 +608,7 @@ func CreateUser(u *User) (err error) {
 
 	if err != nil {
 		// TODO: how to solve this problem?
-	}
+	}*/
 
 	return err
 }
@@ -744,10 +744,10 @@ func updateUser(e Engine, u *User) error {
 	_, err := e.Id(u.ID).AllCols().Update(u)
 
 	// Push new user data to the blockchain
-	if err != nil {
+	/*if err != nil {
 		// TODO: updateUser may be used by tx or not. how to solve this problem?
 		return PushUserInfo(u, 1)
-	}
+	}*/
 
 	return err
 }

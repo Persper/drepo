@@ -324,8 +324,14 @@ func PushRepoInfo(modifier *User, repo *Repository) (err error) {
 		return fmt.Errorf("Can not get user access: %v", err)
 	}
 
-	if hasAccess {
-		if access.Mode == ACCESS_MODE_OWNER {
+	if hasAccess || repo.OwnerID == modifier.ID {
+		if repo.OwnerID == modifier.ID || access.Mode == ACCESS_MODE_OWNER {
+			// Step 0: Push the repo content to the IPFS
+			err0 := PushRepoContent(modifier, repo.RepoPath())
+			if err0 != nil {
+				return fmt.Errorf("Can not push repo content: %v", err0)
+			}
+
 			// Step 1: Encode repo data into JSON format
 			repo_data, err := json.Marshal(repo)
 			if err != nil {
@@ -391,6 +397,35 @@ func PushRepoContent(modifier *User, repoPath string) (err error) {
 	}
 
 	// Step1: Push the repo to IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add -r ", repoPath)
+	cmd := exec.Command("sh", "-c", c)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Push RepoContent to IPFS: fails: %v", err)
+	}
+	ipfsHash := strings.Split(string(out), " ")[1]
+
+	// Step2: Modify the RepoContentIpfsHash in the smart contract
+	// TODO: setRepoContentIpfsHash(ipfsHash)
+	ipfsHash = ipfsHash
+
+	return nil
+}
+
+// Get the new ipfsHash from the blockchain and get the repo content from IPFS
+func GetRepoContent(modifier *User) (err error) {
+	// TODO
+	return nil
+}
+
+// Push the repo content to IPFS and record the new ipfsHash in the blockchain
+// Push only a branch
+func PushRepoContentByDegit(modifier *User, repoPath string) (err error) {
+	if !canPushToBlockchain(modifier) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
+	// Step1: Push the repo to IPFS
 	ipfsHash, err := ipfs.Push_Repo_To_IPFS(repoPath)
 	if err != nil {
 		return err
@@ -404,7 +439,8 @@ func PushRepoContent(modifier *User, repoPath string) (err error) {
 }
 
 // Get the new ipfsHash from the blockchain and get the repo content from IPFS
-func GetRepoContent(modifier *User) (err error) {
+// Get only a branch
+func GetRepoContentByDegit(modifier *User) (err error) {
 	// Step1: getRepoContentIpfsHash() from the smart contract
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
