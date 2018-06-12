@@ -602,13 +602,13 @@ func CreateUser(u *User) (err error) {
 	if err != nil {
 		sess.Rollback()
 		return err
-	}
+	}*/
 
 	err = sess.Commit()
 
 	if err != nil {
 		// TODO: how to solve this problem?
-	}*/
+	}
 
 	return err
 }

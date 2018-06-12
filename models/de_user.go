@@ -7,10 +7,30 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
 
+/// ***** START: DeFollow *****
+type DeFollow struct {
+	FollowID int64 `xorm:"UNIQUE(follow)"`
+}
+
+func transferFollowToDeFollow(follow *Follow, deFollow *DeFollow) {
+	deFollow.FollowID = follow.FollowID
+}
+
+func transferDeFollowToFollow(user *User, deFollow *DeFollow, follow *Follow) {
+	// follow.ID can be generated at any time
+	// TODO: follow.ID
+	follow.UserID = user.ID
+	follow.FollowID = deFollow.FollowID
+}
+
+/// ***** END: DeStar *****
+
+/// ***** START: DeStar *****
 type DeStar struct {
 	RepoID int64 `xorm:"UNIQUE(s)"`
 }
@@ -20,12 +40,15 @@ func transferStarToDeStar(star *Star, deStar *DeStar) {
 }
 
 func transferDeStarToStar(user *User, deStar *DeStar, star *Star) {
+	// star.ID can be generated at any time
 	// TODO: star.ID
 	star.UID = user.ID
 	star.RepoID = deStar.RepoID
 }
 
-// DeWatch is connection request for receiving repository notification.
+/// ***** END: DeStar *****
+
+/// ***** START: DeWatch *****
 type DeWatch struct {
 	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
@@ -35,12 +58,15 @@ func transferWatchToDeWatch(watch *Watch, deWatch *DeWatch) {
 }
 
 func transferDeWatchToWatch(user *User, deWatch *DeWatch, watch *Watch) {
+	// watch.ID can be generated at any time
 	// TODO: watch.ID
 	watch.UserID = user.ID
 	watch.RepoID = deWatch.RepoID
 }
 
-// DeEmailAdresses is the list of all email addresses of a user that remove is_primary
+/// ***** END: DeWatch *****
+
+/// ***** START: DeEmailAddress *****
 type DeEmailAddress struct {
 	Email string `xorm:"UNIQUE NOT NULL"`
 }
@@ -50,7 +76,8 @@ func transferEmailAddrToDeEmailAddr(emailAddr *EmailAddress, deEmailAddr *DeEmai
 }
 
 func transferDeEmailAddrToEmailAddr(user *User, deEmailAddr *DeEmailAddress, emailAddr *EmailAddress) {
-	//emailAddr.ID
+	// emailAddr.ID can be generated at any time
+	// TODO: emailAddr.ID
 	emailAddr.UID = user.ID
 	emailAddr.Email = deEmailAddr.Email
 	emailAddr.IsActivated = true
@@ -61,7 +88,9 @@ func transferDeEmailAddrToEmailAddr(user *User, deEmailAddr *DeEmailAddress, ema
 	}
 }
 
-// DePublicKey represents a user or deploy SSH public key.
+/// ***** END: DeEmailAddress *****
+
+/// ***** START: DePublicKey *****
 type DePublicKey struct {
 	Name        string     `xorm:"NOT NULL"`
 	Fingerprint string     `xorm:"NOT NULL"`
@@ -83,7 +112,8 @@ func transferPubKeyToDePubKey(pubKey *PublicKey, dePubKey *DePublicKey) {
 }
 
 func transferDePubKeyToPubKey(user *User, dePubKey *DePublicKey, pubKey *PublicKey) {
-	//pubKey.ID
+	// pubKey.ID can be generated at any time
+	// TODO: pubKey.ID
 	pubKey.OwnerID = user.ID
 	pubKey.Name = dePubKey.Name
 	pubKey.Fingerprint = dePubKey.Fingerprint
@@ -93,6 +123,8 @@ func transferDePubKeyToPubKey(user *User, dePubKey *DePublicKey, pubKey *PublicK
 	pubKey.CreatedUnix = dePubKey.CreatedUnix
 	pubKey.UpdatedUnix = dePubKey.UpdatedUnix
 }
+
+/// ***** END: DePublicKey *****
 
 // The user table in the IPFS
 type DeUser struct {
@@ -116,8 +148,9 @@ type DeUser struct {
 	UseCustomAvatar    bool
 	EmailAddr          []DeEmailAddress `xorm:"-"`
 	PubKey             []DePublicKey    `xorm:"-"`
-	StarRepoID         []int64          `xorm:"-"`
-	WatchRepoID        []int64          `xorm:"-"`
+	StarRepoID         []DeStar         `xorm:"-"`
+	WatchRepoID        []DeWatch        `xorm:"-"`
+	FollowUserID       []DeFollow       `xorm:"-"`
 	//repo_blacklist
 	//team_blacklist
 	//org_blacklist
@@ -145,8 +178,8 @@ func transferUserToDeUser(user *User, deUser *DeUser) error {
 
 	// ***** START: EmailAddress[] *****
 	emailAddresses := make([]EmailAddress, 0)
-	if err := x.Find(&emailAddresses, &EmailAddress{UID: user.ID}); err != nil {
-		return fmt.Errorf("Can not get emailAddress of the user: %v", err)
+	if err := x.Find(&emailAddresses, &EmailAddress{UID: user.ID, IsActivated: true}); err != nil {
+		return fmt.Errorf("Can not get emailAddresses of the user: %v\n", err)
 	}
 	for i := range emailAddresses {
 		deEmailAddr := new(DeEmailAddress)
@@ -158,7 +191,7 @@ func transferUserToDeUser(user *User, deUser *DeUser) error {
 	// ***** START: PubKey[] *****
 	publicKeys := make([]PublicKey, 0)
 	if err := x.Find(&publicKeys, &PublicKey{OwnerID: user.ID}); err != nil {
-		return fmt.Errorf("Can not get publicKey of the user: %v", err)
+		return fmt.Errorf("Can not get publicKeys of the user: %v\n", err)
 	}
 	for i := range publicKeys {
 		dePublicKey := new(DePublicKey)
@@ -168,16 +201,40 @@ func transferUserToDeUser(user *User, deUser *DeUser) error {
 	// ***** END: PubKey[] *****
 
 	// ***** START: Star[] *****
-	if err := x.Table("star").Cols("repo_id").Find(&deUser.StarRepoID); err != nil {
-		return fmt.Errorf("Can not encode star data: %v", err)
+	stars := make([]Star, 0)
+	if err := x.Find(&stars, &Star{UID: user.ID}); err != nil {
+		return fmt.Errorf("Can not get stars of the user: %v\n", err)
+	}
+	for i := range stars {
+		deStar := new(DeStar)
+		transferStarToDeStar(&stars[i], deStar)
+		deUser.StarRepoID = append(deUser.StarRepoID, *deStar)
 	}
 	// ***** END: Star[] *****
 
 	// ***** START: Watch[] *****
-	if err := x.Table("watch").Cols("repo_id").Find(&deUser.WatchRepoID); err != nil {
-		return fmt.Errorf("Can not encode watch data: %v", err)
+	watches := make([]Watch, 0)
+	if err := x.Find(&watches, &Watch{UserID: user.ID}); err != nil {
+		return fmt.Errorf("Can not get watches of the user: %v\n", err)
+	}
+	for i := range watches {
+		deWatch := new(DeWatch)
+		transferWatchToDeWatch(&watches[i], deWatch)
+		deUser.WatchRepoID = append(deUser.WatchRepoID, *deWatch)
 	}
 	// ***** END: Watch[] *****
+
+	// ***** START: Follow[] *****
+	follows := make([]Follow, 0)
+	if err := x.Find(&follows, &Follow{UserID: user.ID}); err != nil {
+		return fmt.Errorf("Can not get follows of the user: %v\n", err)
+	}
+	for i := range follows {
+		deFollow := new(DeFollow)
+		transferFollowToDeFollow(&follows[i], deFollow)
+		deUser.FollowUserID = append(deUser.FollowUserID, *deFollow)
+	}
+	// ***** END: Follow[] *****
 
 	return nil
 }
@@ -214,44 +271,112 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 	user.NumMembers = 0
 
 	// TODO: not sure
-	// user.UportId
+	// TODO: user.UportId
 	user.IsActive = true
 	user.AllowGitHook = false
 	user.AllowImportLocal = false
 	user.ProhibitLogin = false
 
-	// TODO: the watch and star table is lost
-	// ***** START: NumFollowers *****
-	follow := new(Follow)
-	total, err := x.Where("follow_id = ?", user.ID).Count(follow)
-	if err != nil {
-		return fmt.Errorf("Can not get user numfollowers: %v", err)
+	// ***** START: EmailAddress[] *****
+	for i := range deUser.EmailAddr {
+		emailAddr := new(EmailAddress)
+		transferDeEmailAddrToEmailAddr(user, &deUser.EmailAddr[i], emailAddr)
+		has, err := x.Get(emailAddr)
+		if err != nil {
+			return fmt.Errorf("Can not search the emailAddr: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(emailAddr)
+			if err != nil {
+				return fmt.Errorf("Can not add the email to the server: %v\n", err)
+			}
+		}
 	}
-	user.NumFollowers = int(total)
-	// ***** END: NumFollowers *****
+	// ***** END: EmailAddress[] *****
+
+	// ***** START: PubKey[] *****
+	for i := range deUser.PubKey {
+		pubKey := new(PublicKey)
+		transferDePubKeyToPubKey(user, &deUser.PubKey[i], pubKey)
+		has, err := x.Get(pubKey)
+		if err != nil {
+			return fmt.Errorf("Can not search the pubKey: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(pubKey)
+			if err != nil {
+				return fmt.Errorf("Can not add the pubKey to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: PubKey[] *****
+
+	// ***** START: Star[] *****
+	for i := range deUser.StarRepoID {
+		star := new(Star)
+		transferDeStarToStar(user, &deUser.StarRepoID[i], star)
+		has, err := x.Get(star)
+		if err != nil {
+			return fmt.Errorf("Can not search the star: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(star)
+			if err != nil {
+				return fmt.Errorf("Can not add the star to the server: %v\n", err)
+			}
+		}
+	}
+	user.NumStars = len(deUser.StarRepoID)
+	// ***** END: Star[] *****
+
+	// ***** START: Watch[] *****
+	for i := range deUser.WatchRepoID {
+		watch := new(Watch)
+		transferDeWatchToWatch(user, &deUser.WatchRepoID[i], watch)
+		has, err := x.Get(watch)
+		if err != nil {
+			return fmt.Errorf("Can not search the watch: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(watch)
+			if err != nil {
+				return fmt.Errorf("Can not add the watch to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: Watch[] *****
+
+	// ***** START: Follow[] *****
+	for i := range deUser.FollowUserID {
+		follow := new(Follow)
+		transferDeFollowToFollow(user, &deUser.FollowUserID[i], follow)
+		has, err := x.Get(follow)
+		if err != nil {
+			return fmt.Errorf("Can not search the follow: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(follow)
+			if err != nil {
+				return fmt.Errorf("Can not add the follow to the server: %v\n", err)
+			}
+		}
+	}
+	user.NumFollowers = len(deUser.FollowUserID)
+	// ***** END: Follow[] *****
 
 	// ***** START: NumFollowing *****
-	total, err = x.Where("user_id = ?", user.ID).Count(follow)
-	if err != nil {
-		return fmt.Errorf("Can not get user numfollowing: %v", err)
-	}
-	user.NumFollowing = int(total)
+	// TODO: calculate the numFollowing when all users exist
 	// ***** END: NumFollowing *****
 
-	// ***** START: NumStars *****
-	user.NumStars = 0
-	// ***** END: NumStars *****
-
 	// ***** START: NumRepos *****
+	// Prerequisite: all repos exist or repo.id[] exists
 	repo := new(Repository)
-	total, err = x.Where("owner_id = ?", user.ID).Count(repo)
+	total, err := x.Where("owner_id = ?", user.ID).Count(repo)
 	if err != nil {
 		return fmt.Errorf("Can not get user numRepos: %v", err)
 	}
 	user.NumRepos = int(total)
 	// ***** END: NumRepos *****
-
-	// Recover: star and watch
 
 	return nil
 }
@@ -268,10 +393,9 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 	}
 
 	// Step1: register/deregister the user if it does not exist
-	if pushMode == 1 {
+	if pushMode == 0 {
 		//err = registerName
-	}
-	if pushMode == 2 {
+	} else if pushMode == 2 {
 		//err = deregisterName
 	}
 
@@ -280,7 +404,7 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 	transferUserToDeUser(user, deUser)
 	user_data, err := json.Marshal(deUser)
 	if err != nil {
-		return fmt.Errorf("Can not encode user data: %v", err)
+		return fmt.Errorf("Can not encode user data: %v\n", err)
 	}
 
 	// Step 3: Put the encoded data into IPFS
@@ -288,7 +412,7 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
 	if err2 != nil {
-		return fmt.Errorf("Push User to IPFS: fails: %v", err2)
+		return fmt.Errorf("Ca not push user to IPFS: %v\n", err2)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
@@ -309,22 +433,38 @@ func GetUserInfo(contextUser *User) (err error) {
 	cmd := exec.Command("sh", "-c", c)
 	user_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get User data from IPFS: fails: %v", err)
+		return fmt.Errorf("Can not get user data from IPFS: %v\n", err)
 	}
 
 	// Step3: unmarshall user data
 	newDeUser := new(DeUser)
 	err = json.Unmarshal(user_data, &newDeUser)
 	if err != nil {
-		return fmt.Errorf("Can not decode data: %v", err)
+		return fmt.Errorf("Can not decode user data: %v\n", err)
 	}
 
+	// Step4: write into the local database and mkdir the user path
 	newUser := new(User)
 	transferDeUserToUser(newDeUser, newUser)
+	has, err := x.Get(newUser)
+	if err != nil {
+		return fmt.Errorf("Can not search the user: %v\n", err)
+	}
+	if !has {
+		sess := x.NewSession()
+		defer sess.Close()
+		if err = sess.Begin(); err != nil {
+			return err
+		}
 
-	// Step4: write into the local database
-	// TODO:
-	CreateUser(newUser)
+		if _, err = sess.Insert(newUser); err != nil {
+			return err
+		} else if err = os.MkdirAll(UserPath(newUser.Name), os.ModePerm); err != nil {
+			return err
+		}
+
+		return sess.Commit()
+	}
 
 	return nil
 }
