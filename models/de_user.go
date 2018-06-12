@@ -469,7 +469,7 @@ func GetUserInfo(contextUser *User) (err error) {
 	return nil
 }
 
-/// Push the user info and all related tables to IPFS
+/// The user button: Push the user info and all related tables to IPFS
 func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
@@ -485,7 +485,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 	// Step1: push user: check update or create
 	if err := PushUserInfo(user, 1); err != nil {
-		return fmt.Errorf("Can not push userInfo: %v", err)
+		return err
 	}
 
 	// Step2: push the owned repo
@@ -496,7 +496,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 	for i := range repos {
 		if err = PushRepoInfo(user, &repos[i]); err != nil {
-			return fmt.Errorf("Can not push repo data: %v", err)
+			return err
 		}
 
 		issues := make([]Issue, 0)
@@ -505,7 +505,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 		}
 		for j := range issues {
 			if err = PushIssueInfo(user, &issues[j]); err != nil {
-				return fmt.Errorf("Can not push issue data: %v", err)
+				return err
 			}
 
 			pulls := make([]PullRequest, 0)
@@ -515,7 +515,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 			for k := range pulls {
 				if err = PushPullInfo(user, &pulls[k]); err != nil {
-					return fmt.Errorf("Can not push pull_request data: %v", err)
+					return err
 				}
 			}
 		}
@@ -526,7 +526,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 		}
 		for j := range branches {
 			if err = PushBranchInfo(user, &branches[j]); err != nil {
-				return fmt.Errorf("Can not push branch data: %v", err)
+				return err
 			}
 		}
 	}
@@ -534,7 +534,48 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	return nil
 }
 
-/// Push the user info and all related tables to IPFS
+/// The user button: get the user info and all related tables to IPFS
+func GetUserAndOwnedRepos(user *User) (err error) {
+	// Step0: get the user table
+	if err := GetUserInfo(user); err != nil {
+		return err
+	}
+
+	// Step1: get the owned repo
+	// TODO: from the blockchain
+	/* repos := make([]Repository, 0)
+	for i := range repos {
+		if err := GetRepoInfo(user, repos[i]); err != nil {
+			return err
+		}
+		// TODO: from the blockchain
+		issues := make([]Issue, 0)
+		for j := issues {
+			if err := GetIssueInfo(user, issues[i]); err != nil {
+				return err
+			}
+		}
+		// TODO: from the blockchain
+		pulls := make([]PullRequest, 0)
+		for j := pulls {
+			if err := GetPullInfo(user, pulls[i]); err != nil {
+				return err
+			}
+		}
+		// TODO: from the blockchain
+		branches := make([]ProtectBranch, 0)
+		for j := branches {
+			if err := GetBranchInfo(user, branches[i]); err != nil {
+				return err
+			}
+		}
+	}*/
+
+	return nil
+}
+
+/// Uncompleted
+/// TODO: Push the user info and all related tables to IPFS
 func PushUserAllInfos(contextUser *User) (err error) {
 	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
