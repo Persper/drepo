@@ -775,7 +775,7 @@ func UserLoginUportId(uportid string, loginSourceID int64) (*User, error) {
 
 	hasUser, err := x.Get(user)
 	if err != nil {
-		return nil, fmt.Errorf("get user record: %v", err)
+		return nil, fmt.Errorf("get user uportid: %v", err)
 	}
 
 	if hasUser {
@@ -818,5 +818,5 @@ func UserLoginUportId(uportid string, loginSourceID int64) (*User, error) {
 	return remoteUserLogin(nil, username, password, source, true)*/
 
 	// TODO
-	return nil, nil
+	return nil, errors.UserNotExist{-1, uportid}
 }

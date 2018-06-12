@@ -171,6 +171,11 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	if err != nil {
 		switch err.(type) {
 		case errors.UserNotExist:
+			// Try to get the user from the blockchain
+			fmt.Println("Try to pull " + f.UportId + " from the blockchain/ipfs.")
+			if err2 := models.GetUserAndOwnedRepos(f.UportId); err2 == nil {
+				break
+			}
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
 		case errors.LoginSourceMismatch:

@@ -424,12 +424,12 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 }
 
 // Get the new ipfsHash from the blockchain and get the user info from IPFS
-func GetUserInfo(contextUser *User) (err error) {
+func GetUserInfo(uportID string) (err error) {
 	// Step1: get the user info hash via addrToUserInfo
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+	ipfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
 
 	// Step2: get the ipfs file and get the user data
-	c := fmt.Sprintf("ipfs cat ", ipfsHash)
+	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	user_data, err := cmd.Output()
 	if err != nil {
@@ -446,6 +446,8 @@ func GetUserInfo(contextUser *User) (err error) {
 	// Step4: write into the local database and mkdir the user path
 	newUser := new(User)
 	transferDeUserToUser(newDeUser, newUser)
+	newUser.UportId = uportID
+	fmt.Println(newUser)
 	has, err := x.Get(newUser)
 	if err != nil {
 		return fmt.Errorf("Can not search the user: %v\n", err)
@@ -535,9 +537,9 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 }
 
 /// The user button: get the user info and all related tables to IPFS
-func GetUserAndOwnedRepos(user *User) (err error) {
+func GetUserAndOwnedRepos(uportID string) (err error) {
 	// Step0: get the user table
-	if err := GetUserInfo(user); err != nil {
+	if err := GetUserInfo(uportID); err != nil {
 		return err
 	}
 
