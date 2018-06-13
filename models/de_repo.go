@@ -556,9 +556,9 @@ func PushRepoInfo(user *User, repo *Repository) (err error) {
 }
 
 // Get the new ipfsHash from the blockchain and get the repo info from IPFS
-func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
+func GetRepoInfo(user *User, repo *Repository) (err error) {
 	// Step1: get the repo info hash
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+	ipfsHash := "Qmcodn79uJF7GE9vqQFhD9u4cRMFe5vAMHV7zieHvepBLp"
 
 	// Step2: get the ipfs file and get the user data
 	c := "ipfs cat " + ipfsHash
@@ -582,6 +582,7 @@ func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
 	if err2 != nil {
 		return fmt.Errorf("Can not search the repo: %v\n", err2)
 	}
+
 	if !has {
 		sess := x.NewSession()
 		defer sess.Close()
@@ -589,17 +590,30 @@ func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
 			return err
 		}
 
-		if err = createRepository(sess, doer, owner, repo); err != nil {
-			return err
+		has, err = x.Get(newRepo)
+		if err != nil {
+			return fmt.Errorf("Can not get the repo: %v\n", err2)
 		}
+		if !has {
+			if _, err = sess.Insert(newRepo); err != nil {
+				return fmt.Errorf("Can not insert the repo: %v\n", err)
+			}
+			user.NumRepos++
+			if _, err = sess.Update(user); err != nil {
+				return fmt.Errorf("Can not update the user: %v\n", err)
+			}
 
-		repoPath := RepoPath(owner.Name, repo.Name)
-		if err := GetRepoContent(owner, repoPath); err != nil {
-			return err
+			repoPath := RepoPath(user.Name, repo.Name)
+			fmt.Println("repopath:" + repoPath)
+			if err := GetRepoContent(user, repoPath); err != nil {
+				return err
+			}
 		}
 
 		return sess.Commit()
 	}
+
+	// TODO: watch
 
 	return nil
 }
@@ -631,7 +645,7 @@ func PushRepoContent(user *User, repoPath string) (err error) {
 // Get the new ipfsHash from the blockchain and get the repo content from IPFS
 func GetRepoContent(modifier *User, repoPath string) (err error) {
 	// Step1: get the repo content hash
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+	ipfsHash := "QmYkMofbGtqBozUrG5LjFpMpg8Fhxw7ffJa8WwxtAvooRe"
 
 	// Step2: get the ipfs file and get the user data
 	c := "ipfs get " + ipfsHash
