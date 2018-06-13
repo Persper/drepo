@@ -30,9 +30,10 @@ func transferBranchToDeBranch(branch *ProtectBranch, deBranch *DeBranch) {
 	deBranch.WhitelistTeamIDs = branch.WhitelistTeamIDs
 }
 
-func transferDeBranchToBranch(deBranch *DeBranch, branch *ProtectBranch) {
-	// branch.ID =
-	// branch.RepoID =
+func transferDeBranchToBranch(repo *Repository, deBranch *DeBranch, branch *ProtectBranch) {
+	// branch.ID can be generated at any time
+	// TODO: branch.ID
+	branch.RepoID = repo.ID
 	branch.Name = deBranch.Name
 	branch.Protected = deBranch.Protected
 	branch.RequirePullRequest = deBranch.RequirePullRequest
@@ -70,7 +71,39 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 	return nil
 }
 
-func GetBranchInfo(user *User, branch *ProtectBranch) error {
-	// TODO
+func GetBranchInfo(user *User, repo *Repository, branch *ProtectBranch) error {
+	// Step1: get the branch info hash
+	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+
+	// Step2: get the ipfs file and get the branch data
+	c := "ipfs cat " + ipfsHash
+	cmd := exec.Command("sh", "-c", c)
+	branch_data, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Get branch data from IPFS: fails: %v\n", err)
+	}
+
+	// Step3: unmarshall pull data
+	newDeBranch := new(DeBranch)
+	err = json.Unmarshal(branch_data, &newDeBranch)
+	if err != nil {
+		return fmt.Errorf("Can not decode data: %v", err)
+	}
+
+	// Step4: write into the local database and mkdir the local path
+	newBranch := new(ProtectBranch)
+	transferDeBranchToBranch(repo, newDeBranch, newBranch)
+	has, err2 := x.Get(newBranch)
+	if err2 != nil {
+		return fmt.Errorf("Can not search the branch: %v\n", err)
+	}
+
+	if !has {
+		_, err = x.Insert(newBranch)
+		if err != nil {
+			return fmt.Errorf("Can not add the branch request to the server: %v\n", err)
+		}
+	}
+
 	return nil
 }

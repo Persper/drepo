@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-// The pull request table in the IPFS
 type DePull struct {
 	Type   PullRequestType
 	Status PullRequestStatus
@@ -48,7 +47,8 @@ func transferPullToDePull(pull *PullRequest, dePull *DePull) {
 }
 
 func transferDePullToPull(dePull *DePull, pull *PullRequest) error {
-	// pull.ID =
+	// pull.ID can be generated at any time
+	// TODO: pull.ID
 	// pull.BaseRepoID =
 	pull.Type = dePull.Type
 	pull.Status = dePull.Status
@@ -92,11 +92,44 @@ func PushPullInfo(user *User, pull *PullRequest) error {
 	// Step4: Modify the ipfsHash in the smart contract
 	// TODO: setPullInfo(ipfsHash)
 	ipfsHash = ipfsHash
+	fmt.Println("Push the pullRequest file to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
-func GetPullInfo(user *User, pull *PullRequest) error {
-	// TODO
+func GetPullInfo(user *User, repo *Repository, pull *PullRequest) error {
+	// Step1: get the issue info hash
+	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+
+	// Step2: get the ipfs file and get the pull data
+	c := "ipfs cat " + ipfsHash
+	cmd := exec.Command("sh", "-c", c)
+	pull_data, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Get pull data from IPFS: fails: %v\n", err)
+	}
+
+	// Step3: unmarshall pull data
+	newDePull := new(DePull)
+	err = json.Unmarshal(pull_data, &newDePull)
+	if err != nil {
+		return fmt.Errorf("Can not decode data: %v", err)
+	}
+
+	// Step4: write into the local database and mkdir the local path
+	newPull := new(PullRequest)
+	transferDePullToPull(newDePull, newPull)
+	has, err2 := x.Get(newPull)
+	if err2 != nil {
+		return fmt.Errorf("Can not search the pull request: %v\n", err)
+	}
+
+	if !has {
+		_, err = x.Insert(newPull)
+		if err != nil {
+			return fmt.Errorf("Can not add the pull request to the server: %v\n", err)
+		}
+	}
+
 	return nil
 }

@@ -556,14 +556,14 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 		// TODO: from the blockchain
 		pulls := make([]PullRequest, 0)
 		for j := range pulls {
-			if err := GetPullInfo(user, &pulls[j]); err != nil {
+			if err := GetPullInfo(user, &repos[i], &pulls[j]); err != nil {
 				return err
 			}
 		}
 		// TODO: from the blockchain
 		branches := make([]ProtectBranch, 0)
 		for j := range branches {
-			if err := GetBranchInfo(user, &branches[j]); err != nil {
+			if err := GetBranchInfo(user, &repos[i], &branches[j]); err != nil {
 				return err
 			}
 		}
