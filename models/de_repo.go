@@ -136,7 +136,7 @@ func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, 
 
 	// ***** START: NumIssues *****
 	issue := new(Issue)
-	total, err := x.Where("MilestoneID = ?", milestone.ID).Count(issue)
+	total, err := x.Where("milestone_id = ?", milestone.ID).Count(issue)
 	if err != nil {
 		return fmt.Errorf("Can not get repo issues: %v\n", err)
 	}
@@ -145,7 +145,7 @@ func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, 
 
 	// ***** START: NumClosedIssues *****
 	closedIssue := new(Issue)
-	total, err = x.Where("MilestoneID = ? and is_closed = ?", milestone.ID, true).Count(closedIssue)
+	total, err = x.Where("milestone_id = ? and is_closed = ?", milestone.ID, true).Count(closedIssue)
 	if err != nil {
 		return fmt.Errorf("Can not get repo closedIssues: %v\n", err)
 	}

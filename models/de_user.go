@@ -150,9 +150,10 @@ type DeUser struct {
 	StarRepoID         []DeStar         `xorm:"-"`
 	WatchRepoID        []DeWatch        `xorm:"-"`
 	FollowUserID       []DeFollow       `xorm:"-"`
-	//repo_blacklist
-	//team_blacklist
-	//org_blacklist
+	// TODO:
+	// repo_blacklist
+	// team_blacklist
+	// org_blacklist
 }
 
 func transferUserToDeUser(user *User, deUser *DeUser) error {
@@ -365,7 +366,25 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 	// ***** END: Follow[] *****
 
 	// ***** START: NumFollowing *****
-	// TODO: calculate the numFollowing when all users exist
+	follow := new(Follow)
+	total, err := x.Where("follow_id = ?", user.ID).Count(follow)
+	if err != nil {
+		return fmt.Errorf("Can not get follow issues: %v\n", err)
+	}
+	user.NumFollowing = int(total)
+
+	for i := range deUser.FollowUserID {
+		followingUser := &User{ID: deUser.FollowUserID[i].FollowID}
+		has, err := x.Get(followingUser)
+		if err != nil {
+			return fmt.Errorf("Can not search the followingUser: %v\n", err)
+		}
+		if has {
+			if _, err = x.Exec("UPDATE `user` SET num_following=num_following+1 WHERE id=?", followingUser.ID); err != nil {
+				return fmt.Errorf("update num_following: %v\n", err)
+			}
+		}
+	}
 	// ***** END: NumFollowing *****
 
 	// ***** START: NumRepos *****
@@ -379,7 +398,6 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 /// Push the user info to IPFS and record the new ipfsHash in the blockchain
 /// pushMode: 0 - register; 1 - update; 2 - delete;
 func PushUserInfo(user *User, pushMode int) (err error) {
-	// Do some checks
 	if user.IsOrganization() {
 		return nil
 	}
