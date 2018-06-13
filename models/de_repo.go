@@ -523,7 +523,9 @@ func PushRepoInfo(user *User, repo *Repository) (err error) {
 
 	if repo.OwnerID == user.ID || access.Mode == ACCESS_MODE_OWNER {
 		// Step 1: Encode repo data into JSON format
-		repo_data, err := json.Marshal(repo)
+		deRepo := new(DeRepo)
+		transferRepoToDeRepo(repo, deRepo)
+		repo_data, err := json.Marshal(deRepo)
 		if err != nil {
 			return fmt.Errorf("Can not encode repo data: %v\n", err)
 		}

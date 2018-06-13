@@ -95,7 +95,7 @@ func GetBranchInfo(user *User, repo *Repository, branch *ProtectBranch) error {
 	transferDeBranchToBranch(repo, newDeBranch, newBranch)
 	has, err2 := x.Get(newBranch)
 	if err2 != nil {
-		return fmt.Errorf("Can not search the branch: %v\n", err)
+		return fmt.Errorf("Can not search the branch: %v\n", err2)
 	}
 	if !has {
 		_, err = x.Insert(newBranch)
