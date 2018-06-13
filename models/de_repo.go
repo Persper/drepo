@@ -599,7 +599,7 @@ func GetRepoContent(modifier *User, repoPath string) (err error) {
 	cmd := exec.Command("sh", "-c", c)
 	_, err = cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get Repo content from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get repo content from IPFS: fails: %v\n", err)
 	}
 
 	// Step3: move the .git dir to the repoPath
@@ -607,7 +607,7 @@ func GetRepoContent(modifier *User, repoPath string) (err error) {
 	cmd = exec.Command("sh", "-c", c)
 	_, err = cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Move Repo content to the targeted dir: fails: %v\n", err)
+		return fmt.Errorf("Move repo content to the targeted dir: fails: %v\n", err)
 	}
 
 	return nil

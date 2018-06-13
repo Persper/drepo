@@ -549,7 +549,7 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 		// TODO: from the blockchain
 		issues := make([]Issue, 0)
 		for j := range issues {
-			if err := GetIssueInfo(user, &issues[j]); err != nil {
+			if err := GetIssueInfo(user, &repos[i], &issues[j]); err != nil {
 				return err
 			}
 		}

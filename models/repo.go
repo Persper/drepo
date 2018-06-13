@@ -734,10 +734,10 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 
 	// Push the repo table to the blockchain
-	err = PushRepoInfo(owner, repo)
+	/*err = PushRepoInfo(owner, repo)
 	if err != nil {
 		//return err
-	}
+	}*/
 
 	if !repo.IsBare {
 		// Try to get HEAD branch and set it as default branch.
@@ -1103,9 +1103,9 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 	err = sess.Commit()
 
 	// Push the repo table to the blockchain
-	if err != nil {
+	/*if err != nil {
 		err = PushRepoInfo(doer, repo)
-	}
+	}*/
 
 	return repo, err
 }
@@ -2342,10 +2342,10 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	// Push the repo table to the blockchain
-	err = PushRepoInfo(owner, repo)
+	/*err = PushRepoInfo(owner, repo)
 	if err != nil {
 		//return err
-	}
+	}*/
 	// Push the repo content to the IPFS
 	/*err = PushRepoContent(owner, repoPath)
 	if err != nil {
