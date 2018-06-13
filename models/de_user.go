@@ -495,10 +495,11 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	user = &User{ID: contextUser.ID}
 	_, err = x.Get(user)
 	if err != nil {
-		return fmt.Errorf("Can not get user data: %v", err)
+		return fmt.Errorf("Can not get user data: %v\n", err)
 	}
 
-	// Step1: push user: check update or create
+	// Step1: push user
+	// TODO: check update or create
 	if err := PushUserInfo(user, 1); err != nil {
 		return err
 	}
@@ -506,7 +507,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	// Step2: push the owned repo
 	repos := make([]Repository, 0)
 	if err = x.Find(&repos, &Repository{OwnerID: user.ID}); err != nil {
-		return fmt.Errorf("Can not get owned repos of the user: %v", err)
+		return fmt.Errorf("Can not get owned repos of the user: %v\n", err)
 	}
 
 	for i := range repos {

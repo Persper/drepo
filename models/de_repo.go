@@ -316,83 +316,6 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	repo.CreatedUnix = deRepo.CreatedUnix
 	repo.UpdatedUnix = deRepo.UpdatedUnix
 
-	// ***** START: NumIssues *****
-	issue := new(Issue)
-	total, err := x.Where("repo_id = ?", repo.ID).Count(issue)
-	if err != nil {
-		return fmt.Errorf("Can not get repo issues: %v\n", err)
-	}
-	repo.NumIssues = int(total)
-	// ***** END: NumIssues *****
-
-	// ***** START: NumClosedIssues *****
-	closedIssue := new(Issue)
-	total, err = x.Where("repo_id = ? and is_closed = ?", repo.ID, true).Count(closedIssue)
-	if err != nil {
-		return fmt.Errorf("Can not get repo closedIssues: %v\n", err)
-	}
-	repo.NumClosedIssues = int(total)
-	// ***** END: NumClosedIssues *****
-
-	// ***** START: NumWatches *****
-	watch := new(Watch)
-	total, err = x.Where("repo_id = ?", repo.ID).Count(watch)
-	if err != nil {
-		return fmt.Errorf("Can not get repo watches: %v\n", err)
-	}
-	repo.NumWatches = int(total)
-	// ***** END: NumWatches *****
-
-	// ***** START: NumStars *****
-	star := new(Star)
-	total, err = x.Where("repo_id = ?", repo.ID).Count(star)
-	if err != nil {
-		return fmt.Errorf("Can not get repo stars: %v\n", err)
-	}
-	repo.NumStars = int(total)
-	// ***** END: NumStars *****
-
-	// ***** START: NumMilestones *****
-	milestone := new(Milestone)
-	total, err = x.Where("repo_id = ?", repo.ID).Count(milestone)
-	if err != nil {
-		return fmt.Errorf("Can not get repo milestones: %v\n", err)
-	}
-	repo.NumMilestones = int(total)
-	// ***** END: NumMilestones *****
-
-	// ***** START: NumClosedMilestones *****
-	closedMilestone := new(Milestone)
-	total, err = x.Where("repo_id = ? and is_closed = ?", repo.ID, true).Count(closedMilestone)
-	if err != nil {
-		return fmt.Errorf("Can not get repo closedMilestones: %v\n", err)
-	}
-	repo.NumClosedMilestones = int(total)
-	// ***** END: NumClosedMilestones *****
-
-	// ***** START: NumPulls *****
-	pullRequest := new(PullRequest)
-	total, err = x.Where("repo_id = ?", repo.ID).Count(pullRequest)
-	if err != nil {
-		return fmt.Errorf("Can not get repo pullRequests: %v\n", err)
-	}
-	repo.NumPulls = int(total)
-	// ***** END: NumPulls *****
-
-	// ***** START: NumClosedPulls *****
-	// Todo: closedPullRequest
-	// Note: do not find how to calculate closedPullRequest
-	// ***** END: NumClosedPulls *****
-
-	// ***** START: NumForks *****
-	/*
-		forks := make([]*Repository, 0, repo.NumForks)
-		if err := x.Find(&forks, &Repository{ForkID: repo.ID}); err != nil {
-			return nil, err
-		}
-	*/
-	// ***** END: NumForks *****
-
 	// ***** START: Access[] *****
 	for i := range deRepo.Accesses {
 		access := new(Access)
@@ -460,6 +383,101 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 		}
 	}
 	// ***** END: milestone[] *****
+
+	// ***** START: NumIssues *****
+	issue := new(Issue)
+	total, err := x.Where("repo_id = ?", repo.ID).Count(issue)
+	if err != nil {
+		return fmt.Errorf("Can not get repo issues: %v\n", err)
+	}
+	repo.NumIssues = int(total)
+	// ***** END: NumIssues *****
+
+	// ***** START: NumClosedIssues *****
+	closedIssue := new(Issue)
+	total, err = x.Where("repo_id = ? and is_closed = ?", repo.ID, true).Count(closedIssue)
+	if err != nil {
+		return fmt.Errorf("Can not get repo closedIssues: %v\n", err)
+	}
+	repo.NumClosedIssues = int(total)
+	// ***** END: NumClosedIssues *****
+
+	// ***** START: NumWatches *****
+	watch := new(Watch)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(watch)
+	if err != nil {
+		return fmt.Errorf("Can not get repo watches: %v\n", err)
+	}
+	repo.NumWatches = int(total)
+	// ***** END: NumWatches *****
+
+	// ***** START: NumStars *****
+	star := new(Star)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(star)
+	if err != nil {
+		return fmt.Errorf("Can not get repo stars: %v\n", err)
+	}
+	repo.NumStars = int(total)
+	// ***** END: NumStars *****
+
+	// ***** START: NumMilestones *****
+	milestone := new(Milestone)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(milestone)
+	if err != nil {
+		return fmt.Errorf("Can not get repo milestones: %v\n", err)
+	}
+	repo.NumMilestones = int(total)
+	// ***** END: NumMilestones *****
+
+	// ***** START: NumClosedMilestones *****
+	closedMilestone := new(Milestone)
+	total, err = x.Where("repo_id = ? and is_closed = ?", repo.ID, true).Count(closedMilestone)
+	if err != nil {
+		return fmt.Errorf("Can not get repo closedMilestones: %v\n", err)
+	}
+	repo.NumClosedMilestones = int(total)
+	// ***** END: NumClosedMilestones *****
+
+	// ***** START: NumPulls *****
+	pullRequest := new(PullRequest)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(pullRequest)
+	if err != nil {
+		return fmt.Errorf("Can not get repo pullRequests: %v\n", err)
+	}
+	repo.NumPulls = int(total)
+	// ***** END: NumPulls *****
+
+	// ***** START: NumClosedPulls *****
+	// Todo: not sure
+	pullRequest = new(PullRequest)
+	total, err = x.Where("repo_id = ? and has_merged", repo.ID, true).Count(pullRequest)
+	if err != nil {
+		return fmt.Errorf("Can not get repo closedPullRequests: %v\n", err)
+	}
+	repo.NumPulls = int(total)
+	// ***** END: NumClosedPulls *****
+
+	// ***** START: NumForks *****
+	forkRepo := new(Repository)
+	total, err = x.Where("fork_id = ?", repo.ID).Count(forkRepo)
+	if err != nil {
+		return fmt.Errorf("Can not get fork repos: %v\n", err)
+	}
+	repo.NumForks = int(total)
+
+	if repo.IsFork {
+		forkingRepo := &Repository{ID: repo.ForkID}
+		has, err := x.Get(forkingRepo)
+		if err != nil {
+			return fmt.Errorf("Can not search the forkingRepo: %v\n", err)
+		}
+		if has {
+			if _, err = x.Exec("UPDATE `repository` SET num_forks=num_forks+1 WHERE id=?", forkingRepo.ID); err != nil {
+				return fmt.Errorf("update forkingRepo: %v\n", err)
+			}
+		}
+	}
+	// ***** END: NumForks *****
 
 	return nil
 }
