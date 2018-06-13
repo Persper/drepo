@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+/// ***** START: DeAccess *****
 type DeAccess struct {
 	UserID int64 `xorm:"UNIQUE(s)"`
 	Mode   AccessMode
@@ -22,13 +23,17 @@ func transferAcessToDeAccess(access *Access, deAccess *DeAccess) {
 	deAccess.Mode = access.Mode
 }
 
-func transferDeAcessToAccess(repo *Repository, deAccess *DeAccess, access Access) {
-	// access.ID
+func transferDeAcessToAccess(repo *Repository, deAccess *DeAccess, access *Access) {
+	// access.ID can be generated at any time
+	// TODO: access.ID
+	access.RepoID = repo.ID
 	access.UserID = deAccess.UserID
 	access.Mode = deAccess.Mode
-	access.RepoID = repo.ID
 }
 
+/// ***** END: DeAccess *****
+
+/// ***** START: DeCollaboration *****
 type DeCollaboration struct {
 	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
@@ -39,13 +44,17 @@ func transferCollaToDeColla(colla *Collaboration, deColla *DeCollaboration) {
 	deColla.Mode = colla.Mode
 }
 
-func transferDeCollaToColla(repo *Repository, deColla *DeCollaboration, colla Collaboration) {
-	//colla.ID
+func transferDeCollaToColla(repo *Repository, deColla *DeCollaboration, colla *Collaboration) {
+	// colla.ID can be generated at any time
+	// TODO: colla.ID
 	colla.RepoID = repo.ID
 	colla.UserID = deColla.UserID
 	colla.Mode = deColla.Mode
 }
 
+/// ***** END: DeCollaboration *****
+
+/// ***** START: DeRelease *****
 type DeRelease struct {
 	PublisherID  int64
 	TagName      string
@@ -75,7 +84,8 @@ func transferReleaseToDeRelease(release *Release, deRelease *DeRelease) {
 }
 
 func transferDeReleaseToRelease(repo *Repository, deRelease *DeRelease, release *Release) {
-	//release.ID =
+	// release.ID can be generated at any time
+	// TODO: release.ID
 	release.RepoID = repo.ID
 	release.PublisherID = deRelease.PublisherID
 	release.TagName = deRelease.TagName
@@ -90,6 +100,9 @@ func transferDeReleaseToRelease(repo *Repository, deRelease *DeRelease, release 
 	release.CreatedUnix = deRelease.CreatedUnix
 }
 
+/// ***** END: DeRelease *****
+
+/// ***** START: DeMilestone *****
 type DeMilestone struct {
 	ID             int64
 	Name           string
@@ -110,7 +123,8 @@ func transferMilestoneToDeMilestone(milestone *Milestone, deMilestone *DeMilesto
 	deMilestone.ClosedDateUnix = milestone.ClosedDateUnix
 }
 
-func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, milestone *Milestone) {
+/// Prerequisite: all issue exist
+func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, milestone *Milestone) error {
 	milestone.ID = deMilestone.ID
 	milestone.RepoID = repo.ID
 	milestone.Name = deMilestone.Name
@@ -120,12 +134,29 @@ func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, 
 	milestone.DeadlineUnix = deMilestone.DeadlineUnix
 	milestone.ClosedDateUnix = deMilestone.ClosedDateUnix
 
-	// TODO:
-	// NumIssues
-	// NumClosedIssues
+	// ***** START: NumIssues *****
+	issue := new(Issue)
+	total, err := x.Where("MilestoneID = ?", milestone.ID).Count(issue)
+	if err != nil {
+		return fmt.Errorf("Can not get repo issues: %v\n", err)
+	}
+	milestone.NumIssues = int(total)
+	// ***** END: NumIssues *****
+
+	// ***** START: NumClosedIssues *****
+	closedIssue := new(Issue)
+	total, err = x.Where("MilestoneID = ? and is_closed = ?", milestone.ID, true).Count(closedIssue)
+	if err != nil {
+		return fmt.Errorf("Can not get repo closedIssues: %v\n", err)
+	}
+	milestone.NumClosedIssues = int(total)
+	// ***** END: NumClosedIssues *****
+
+	return nil
 }
 
-// The repo table in the IPFS
+/// ***** END: DeMilestone *****
+
 type DeRepo struct {
 	ID            int64
 	OwnerID       int64  `xorm:"UNIQUE(s)"`
@@ -141,6 +172,7 @@ type DeRepo struct {
 	IsMirror  bool
 
 	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	AllowPublicWiki       bool
 	EnableExternalWiki    bool
 	ExternalWikiURL       string
 	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
@@ -162,11 +194,6 @@ type DeRepo struct {
 	Collaborations []DeCollaboration `xorm:"-"`
 	Releases       []DeRelease       `xorm:"-"`
 	Milestones     []DeMilestone     `xorm:"-"`
-
-	/*
-		release.{publisher_id, tag_name, lower_tag_name, target, title, sha1, num_commits, note, is_draft, is_prerelease, created_unix}[]
-		milestone.{id, name, content, is_closed, completeness, deadline_unix, closed_date_unix}[]: The milestone ID begins with the address of the owner of this repo.
-	*/
 }
 
 func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
@@ -184,6 +211,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	deRepo.IsMirror = repo.IsMirror
 
 	deRepo.EnableWiki = repo.EnableWiki
+	deRepo.AllowPublicWiki = repo.AllowPublicWiki
 	deRepo.EnableExternalWiki = repo.EnableExternalWiki
 	deRepo.ExternalWikiURL = repo.ExternalWikiURL
 	deRepo.EnableIssues = repo.EnableIssues
@@ -205,7 +233,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Access[] *****
 	accesses := make([]Access, 0)
 	if err := x.Find(&accesses, &Access{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get accesses of the user: %v", err)
+		return fmt.Errorf("Can not get accesses of the user: %v\n", err)
 	}
 	for i := range accesses {
 		deAccess := new(DeAccess)
@@ -217,7 +245,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Collaboration[] *****
 	collaborations := make([]Collaboration, 0)
 	if err := x.Find(&collaborations, &Collaboration{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get collaborations of the user: %v", err)
+		return fmt.Errorf("Can not get collaborations of the user: %v\n", err)
 	}
 	for i := range collaborations {
 		deCollaboration := new(DeCollaboration)
@@ -229,7 +257,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Release[] *****
 	releases := make([]Release, 0)
 	if err := x.Find(&releases, &Release{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get releases of the user: %v", err)
+		return fmt.Errorf("Can not get releases of the user: %v\n", err)
 	}
 	for i := range releases {
 		deRelease := new(DeRelease)
@@ -241,7 +269,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Milestone[] *****
 	milestones := make([]Milestone, 0)
 	if err := x.Find(&milestones, &Milestone{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get milestones of the user: %v", err)
+		return fmt.Errorf("Can not get milestones of the user: %v\n", err)
 	}
 	for i := range milestones {
 		deMilestone := new(DeMilestone)
@@ -253,6 +281,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	return nil
 }
 
+/// Prerequisite: issue / watch / star / milistone/ pulls /
 func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	repo.ID = deRepo.ID
 	repo.OwnerID = deRepo.OwnerID
@@ -268,6 +297,7 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	repo.IsMirror = deRepo.IsMirror
 
 	repo.EnableWiki = deRepo.EnableWiki
+	repo.AllowPublicWiki = deRepo.AllowPublicWiki
 	repo.EnableExternalWiki = deRepo.EnableExternalWiki
 	repo.ExternalWikiURL = deRepo.ExternalWikiURL
 	repo.EnableIssues = deRepo.EnableIssues
@@ -286,26 +316,150 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	repo.CreatedUnix = deRepo.CreatedUnix
 	repo.UpdatedUnix = deRepo.UpdatedUnix
 
-	// TODO: Access
-	// TODO: Collaboration
-	// TODO: Release
+	// ***** START: NumIssues *****
+	issue := new(Issue)
+	total, err := x.Where("repo_id = ?", repo.ID).Count(issue)
+	if err != nil {
+		return fmt.Errorf("Can not get repo issues: %v\n", err)
+	}
+	repo.NumIssues = int(total)
+	// ***** END: NumIssues *****
 
-	// TODO
-	/*type Repository struct {
-		NumWatches          int
-		NumStars            int
-		NumForks            int
-		NumIssues           int
-		NumClosedIssues     int
-		NumPulls            int
-		NumClosedPulls      int
-		NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
-		NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
+	// ***** START: NumClosedIssues *****
+	closedIssue := new(Issue)
+	total, err = x.Where("repo_id = ? and is_closed = ?", repo.ID, true).Count(closedIssue)
+	if err != nil {
+		return fmt.Errorf("Can not get repo closedIssues: %v\n", err)
+	}
+	repo.NumClosedIssues = int(total)
+	// ***** END: NumClosedIssues *****
 
-		// Advanced settings
-		AllowPublicWiki   bool
-		AllowPublicIssues bool
-	}*/
+	// ***** START: NumWatches *****
+	watch := new(Watch)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(watch)
+	if err != nil {
+		return fmt.Errorf("Can not get repo watches: %v\n", err)
+	}
+	repo.NumWatches = int(total)
+	// ***** END: NumWatches *****
+
+	// ***** START: NumStars *****
+	star := new(Star)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(star)
+	if err != nil {
+		return fmt.Errorf("Can not get repo stars: %v\n", err)
+	}
+	repo.NumStars = int(total)
+	// ***** END: NumStars *****
+
+	// ***** START: NumMilestones *****
+	milestone := new(Milestone)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(milestone)
+	if err != nil {
+		return fmt.Errorf("Can not get repo milestones: %v\n", err)
+	}
+	repo.NumMilestones = int(total)
+	// ***** END: NumMilestones *****
+
+	// ***** START: NumClosedMilestones *****
+	closedMilestone := new(Milestone)
+	total, err = x.Where("repo_id = ? and is_closed = ?", repo.ID, true).Count(closedMilestone)
+	if err != nil {
+		return fmt.Errorf("Can not get repo closedMilestones: %v\n", err)
+	}
+	repo.NumClosedMilestones = int(total)
+	// ***** END: NumClosedMilestones *****
+
+	// ***** START: NumPulls *****
+	pullRequest := new(PullRequest)
+	total, err = x.Where("repo_id = ?", repo.ID).Count(pullRequest)
+	if err != nil {
+		return fmt.Errorf("Can not get repo pullRequests: %v\n", err)
+	}
+	repo.NumPulls = int(total)
+	// ***** END: NumPulls *****
+
+	// ***** START: NumClosedPulls *****
+	// Todo: closedPullRequest
+	// Note: do not find how to calculate closedPullRequest
+	// ***** END: NumClosedPulls *****
+
+	// ***** START: NumForks *****
+	/*
+		forks := make([]*Repository, 0, repo.NumForks)
+		if err := x.Find(&forks, &Repository{ForkID: repo.ID}); err != nil {
+			return nil, err
+		}
+	*/
+	// ***** END: NumForks *****
+
+	// ***** START: Access[] *****
+	for i := range deRepo.Accesses {
+		access := new(Access)
+		transferDeAcessToAccess(repo, &deRepo.Accesses[i], access)
+		has, err := x.Get(access)
+		if err != nil {
+			return fmt.Errorf("Can not search the access: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(access)
+			if err != nil {
+				return fmt.Errorf("Can not add the access to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: Access[] *****
+
+	// ***** START: Collaboration[] *****
+	for i := range deRepo.Collaborations {
+		collaboration := new(Collaboration)
+		transferDeCollaToColla(repo, &deRepo.Collaborations[i], collaboration)
+		has, err := x.Get(collaboration)
+		if err != nil {
+			return fmt.Errorf("Can not search the collaboration: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(collaboration)
+			if err != nil {
+				return fmt.Errorf("Can not add the collaboration to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: Collaboration[] *****
+
+	// ***** START: Release[] *****
+	for i := range deRepo.Releases {
+		release := new(Release)
+		transferDeReleaseToRelease(repo, &deRepo.Releases[i], release)
+		has, err := x.Get(release)
+		if err != nil {
+			return fmt.Errorf("Can not search the release: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(release)
+			if err != nil {
+				return fmt.Errorf("Can not add the release to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: Release[] *****
+
+	// ***** START: milestone[] *****
+	for i := range deRepo.Milestones {
+		milestone := new(Milestone)
+		transferDeMilestoneToMilestone(repo, &deRepo.Milestones[i], milestone)
+		has, err := x.Get(milestone)
+		if err != nil {
+			return fmt.Errorf("Can not search the milestone: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(milestone)
+			if err != nil {
+				return fmt.Errorf("Can not add the milestone to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: milestone[] *****
 
 	return nil
 }
@@ -316,76 +470,98 @@ func PushRepoInfo(modifier *User, repo *Repository) (err error) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// admin or writer
-	var access *Access
-	access = &Access{UserID: modifier.ID, RepoID: repo.ID}
-	hasAccess, err := x.Get(access)
+	// Step0: push the repo content to the IPFS
+	err = PushRepoContent(modifier, repo.RepoPath())
 	if err != nil {
-		return fmt.Errorf("Can not get user access: %v", err)
+		return err
 	}
 
-	if hasAccess || repo.OwnerID == modifier.ID {
-		if repo.OwnerID == modifier.ID || access.Mode == ACCESS_MODE_OWNER {
-			// Step 0: Push the repo content to the IPFS
-			err0 := PushRepoContent(modifier, repo.RepoPath())
-			if err0 != nil {
-				return fmt.Errorf("Can not push repo content: %v", err0)
-			}
+	// step1: push the repo table to the IPFS
+	var access *Access
+	access = &Access{UserID: modifier.ID, RepoID: repo.ID}
+	_, err = x.Get(access)
+	if err != nil {
+		return fmt.Errorf("Can not get user access: %v\n", err)
+	}
 
-			// Step 1: Encode repo data into JSON format
-			repo_data, err := json.Marshal(repo)
-			if err != nil {
-				return fmt.Errorf("Can not encode repo data: %v", err)
-			}
-
-			// Step 2: Put the encoded data into IPFS
-			c := fmt.Sprintf("echo '%s' | ipfs add ", repo_data)
-			cmd := exec.Command("sh", "-c", c)
-			out, err2 := cmd.Output()
-			if err2 != nil {
-				return fmt.Errorf("Push Repo to IPFS: fails: %v", err2)
-			}
-			ipfsHash := strings.Split(string(out), " ")[1]
-
-			// Step3: Modify the ipfsHash in the smart contract
-			// TODO: setRepoInfo(ipfsHash)
-			ipfsHash = ipfsHash
-
+	if repo.OwnerID == modifier.ID || access.Mode == ACCESS_MODE_OWNER {
+		// Step 1: Encode repo data into JSON format
+		repo_data, err := json.Marshal(repo)
+		if err != nil {
+			return fmt.Errorf("Can not encode repo data: %v\n", err)
 		}
-		if access.Mode == ACCESS_MODE_ADMIN {
 
+		// Step 2: Put the encoded data into IPFS
+		c := fmt.Sprintf("echo '%s' | ipfs add ", repo_data)
+		cmd := exec.Command("sh", "-c", c)
+		out, err2 := cmd.Output()
+		if err2 != nil {
+			return fmt.Errorf("Push Repo to IPFS: fails: %v\n", err2)
 		}
-		if access.Mode == ACCESS_MODE_WRITE {
+		ipfsHash := strings.Split(string(out), " ")[1]
 
-		}
+		// Step3: Modify the ipfsHash in the smart contract
+		// TODO: setRepoInfo(ipfsHash)
+		ipfsHash = ipfsHash
+		fmt.Println("Push the repo file to the IPFS: " + ipfsHash)
+
+	}
+	if access.Mode == ACCESS_MODE_ADMIN {
+
+	}
+	if access.Mode == ACCESS_MODE_WRITE {
+
 	}
 
 	return nil
 }
 
 // Get the new ipfsHash from the blockchain and get the repo info from IPFS
-func GetRepoInfo(owner *User, repo *Repository) (err error) {
-	// Step1: get the repo info hash via
+func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
+	// Step1: get the repo info hash
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
 	// Step2: get the ipfs file and get the user data
-	c := fmt.Sprintf("ipfs cat ", ipfsHash)
+	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	repo_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get Repo data from IPFS: fails: %v", err)
+		return fmt.Errorf("Get Repo data from IPFS: fails: %v\n", err)
 	}
 
 	// Step3: unmarshall user data
-	var newRepo = new(Repository)
-	err = json.Unmarshal(repo_data, &newRepo)
+	newDeRepo := new(DeRepo)
+	err = json.Unmarshal(repo_data, &newDeRepo)
 	if err != nil {
 		return fmt.Errorf("Can not decode data: %v", err)
 	}
 
-	// Step4: write into the local database
-	// TODO:
-	//CreateRepo(newRepo)
+	// Step4: write into the local database and mkdir the local path
+	newRepo := new(Repository)
+	transferDeRepoToRepo(newDeRepo, newRepo)
+	has, err2 := x.Get(newRepo)
+	if err2 != nil {
+		return fmt.Errorf("Can not search the repo: %v\n", err)
+	}
+
+	if !has {
+		sess := x.NewSession()
+		defer sess.Close()
+		if err = sess.Begin(); err != nil {
+			return err
+		}
+
+		if err = createRepository(sess, doer, owner, repo); err != nil {
+			return err
+		}
+
+		repoPath := RepoPath(owner.Name, repo.Name)
+		if err := GetRepoContent(owner, repoPath); err != nil {
+			return err
+		}
+
+		return sess.Commit()
+	}
 
 	return nil
 }
@@ -397,29 +573,48 @@ func PushRepoContent(modifier *User, repoPath string) (err error) {
 	}
 
 	// Step1: Push the repo to IPFS
-	c := fmt.Sprintf("echo '%s' | ipfs add -r ", repoPath)
+	c := "ipfs add -r  " + repoPath
 	cmd := exec.Command("sh", "-c", c)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Push RepoContent to IPFS: fails: %v", err)
+		return fmt.Errorf("Push repoContent to IPFS: fails: %v\n", err)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
 	// Step2: Modify the RepoContentIpfsHash in the smart contract
 	// TODO: setRepoContentIpfsHash(ipfsHash)
 	ipfsHash = ipfsHash
+	fmt.Println("Push the repo content to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
 // Get the new ipfsHash from the blockchain and get the repo content from IPFS
-func GetRepoContent(modifier *User) (err error) {
-	// TODO
+func GetRepoContent(modifier *User, repoPath string) (err error) {
+	// Step1: get the repo content hash
+	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+
+	// Step2: get the ipfs file and get the user data
+	c := "ipfs get " + ipfsHash
+	cmd := exec.Command("sh", "-c", c)
+	_, err = cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Get Repo content from IPFS: fails: %v\n", err)
+	}
+
+	// Step3: move the .git dir to the repoPath
+	c = "mv " + ipfsHash + " " + repoPath
+	cmd = exec.Command("sh", "-c", c)
+	_, err = cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Move Repo content to the targeted dir: fails: %v\n", err)
+	}
+
 	return nil
 }
 
-// Push the repo content to IPFS and record the new ipfsHash in the blockchain
-// Push only a branch
+/// TODO: Push the whole .git dir rather than only a branch
+/// Push the repo content to IPFS and record the new ipfsHash in the blockchain
 func PushRepoContentByDegit(modifier *User, repoPath string) (err error) {
 	if !canPushToBlockchain(modifier) {
 		return fmt.Errorf("The user can not push to the blockchain")
@@ -438,8 +633,7 @@ func PushRepoContentByDegit(modifier *User, repoPath string) (err error) {
 	return nil
 }
 
-// Get the new ipfsHash from the blockchain and get the repo content from IPFS
-// Get only a branch
+/// Get the new ipfsHash from the blockchain and get the repo content from IPFS
 func GetRepoContentByDegit(modifier *User) (err error) {
 	// Step1: getRepoContentIpfsHash() from the smart contract
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"

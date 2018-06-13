@@ -188,7 +188,7 @@ func PushIssueInfo(user *User, issue *Issue) error {
 	return nil
 }
 
-func GetIssueInfo(user *User, org *User) error {
+func GetIssueInfo(user *User, issue *Issue) error {
 	// TODO
 	return nil
 }

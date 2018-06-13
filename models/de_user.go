@@ -126,7 +126,6 @@ func transferDePubKeyToPubKey(user *User, dePubKey *DePublicKey, pubKey *PublicK
 
 /// ***** END: DePublicKey *****
 
-// The user table in the IPFS
 type DeUser struct {
 	ID                 int64
 	Name               string `xorm:"UNIQUE NOT NULL"`
@@ -239,6 +238,7 @@ func transferUserToDeUser(user *User, deUser *DeUser) error {
 	return nil
 }
 
+// Prerequisite: all repos exist or repo.id[] exists
 func transferDeUserToUser(deUser *DeUser, user *User) error {
 	user.ID = deUser.ID
 	user.Name = deUser.Name
@@ -369,13 +369,8 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 	// ***** END: NumFollowing *****
 
 	// ***** START: NumRepos *****
-	// Prerequisite: all repos exist or repo.id[] exists
-	repo := new(Repository)
-	total, err := x.Where("owner_id = ?", user.ID).Count(repo)
-	if err != nil {
-		return fmt.Errorf("Can not get user numRepos: %v", err)
-	}
-	user.NumRepos = int(total)
+	// NumRepos will be updated when the corresponding repo is added
+	user.NumRepos = 0
 	// ***** END: NumRepos *****
 
 	return nil
@@ -419,12 +414,13 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 	// Step4: Modify the ipfsHash in the smart contract
 	// TODO: setUserInfo(ipfsHash)
 	ipfsHash = ipfsHash
+	fmt.Println("Push the user file to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
 // Get the new ipfsHash from the blockchain and get the user info from IPFS
-func GetUserInfo(uportID string) (err error) {
+func GetUserInfo(uportID string) (user *User, err error) {
 	// Step1: get the user info hash via addrToUserInfo
 	ipfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
 
@@ -433,42 +429,41 @@ func GetUserInfo(uportID string) (err error) {
 	cmd := exec.Command("sh", "-c", c)
 	user_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Can not get user data from IPFS: %v\n", err)
+		return nil, fmt.Errorf("Can not get user data from IPFS: %v\n", err)
 	}
 
 	// Step3: unmarshall user data
 	newDeUser := new(DeUser)
 	err = json.Unmarshal(user_data, &newDeUser)
 	if err != nil {
-		return fmt.Errorf("Can not decode user data: %v\n", err)
+		return nil, fmt.Errorf("Can not decode user data: %v\n", err)
 	}
 
 	// Step4: write into the local database and mkdir the user path
 	newUser := new(User)
 	transferDeUserToUser(newDeUser, newUser)
 	newUser.UportId = uportID
-	fmt.Println(newUser)
 	has, err := x.Get(newUser)
 	if err != nil {
-		return fmt.Errorf("Can not search the user: %v\n", err)
+		return nil, fmt.Errorf("Can not search the user: %v\n", err)
 	}
 	if !has {
 		sess := x.NewSession()
 		defer sess.Close()
 		if err = sess.Begin(); err != nil {
-			return err
+			return nil, err
 		}
 
 		if _, err = sess.Insert(newUser); err != nil {
-			return err
+			return nil, err
 		} else if err = os.MkdirAll(UserPath(newUser.Name), os.ModePerm); err != nil {
-			return err
+			return nil, err
 		}
 
-		return sess.Commit()
+		return newUser, sess.Commit()
 	}
 
-	return nil
+	return newUser, nil
 }
 
 /// The user button: Push the user info and all related tables to IPFS
@@ -539,39 +534,40 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 /// The user button: get the user info and all related tables to IPFS
 func GetUserAndOwnedRepos(uportID string) (err error) {
 	// Step0: get the user table
-	if err := GetUserInfo(uportID); err != nil {
+	var user *User
+	if user, err = GetUserInfo(uportID); err != nil {
 		return err
 	}
 
 	// Step1: get the owned repo
 	// TODO: from the blockchain
-	/* repos := make([]Repository, 0)
+	repos := make([]Repository, 0)
 	for i := range repos {
-		if err := GetRepoInfo(user, repos[i]); err != nil {
+		if err := GetRepoInfo(user, user, &repos[i]); err != nil {
 			return err
 		}
 		// TODO: from the blockchain
 		issues := make([]Issue, 0)
-		for j := issues {
-			if err := GetIssueInfo(user, issues[i]); err != nil {
+		for j := range issues {
+			if err := GetIssueInfo(user, &issues[j]); err != nil {
 				return err
 			}
 		}
 		// TODO: from the blockchain
 		pulls := make([]PullRequest, 0)
-		for j := pulls {
-			if err := GetPullInfo(user, pulls[i]); err != nil {
+		for j := range pulls {
+			if err := GetPullInfo(user, &pulls[j]); err != nil {
 				return err
 			}
 		}
 		// TODO: from the blockchain
 		branches := make([]ProtectBranch, 0)
-		for j := branches {
-			if err := GetBranchInfo(user, branches[i]); err != nil {
+		for j := range branches {
+			if err := GetBranchInfo(user, &branches[j]); err != nil {
 				return err
 			}
 		}
-	}*/
+	}
 
 	return nil
 }
@@ -593,7 +589,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 
 	// Step1: push user: check update or create
 	if err := PushUserInfo(user, 1); err != nil {
-		return fmt.Errorf("Can not push userInfo: %v", err)
+		return err
 	}
 
 	// Step2: push the related orgs
@@ -610,11 +606,11 @@ func PushUserAllInfos(contextUser *User) (err error) {
 		}
 		if hasOrg {
 			if err = PushOrgInfo(user, org); err != nil {
-				return fmt.Errorf("Can not push org data: %v", err)
+				return err
 			}
 			// TODO: only owner?
 			if err = PushOrgUserInfo(user, org, &orgUsers[i]); err != nil {
-				return fmt.Errorf("Can not push orgUser data: %v", err)
+				return err
 			}
 
 			teams := make([]Team, 0)
@@ -623,7 +619,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 			}
 			for j := range teams {
 				if err = PushTeamInfo(user, &teams[j]); err != nil {
-					return fmt.Errorf("Can not push team data: %v", err)
+					return err
 				}
 			}
 		}
@@ -643,7 +639,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 		}
 		if hasRepo {
 			if err = PushRepoInfo(user, repo); err != nil {
-				return fmt.Errorf("Can not push repo data: %v", err)
+				return err
 			}
 		}
 
@@ -654,7 +650,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 
 		for j := range issues {
 			if err = PushIssueInfo(user, &issues[j]); err != nil {
-				return fmt.Errorf("Can not push issue data: %v", err)
+				return err
 			}
 
 			pulls := make([]PullRequest, 0)
@@ -664,7 +660,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 
 			for k := range pulls {
 				if err = PushPullInfo(user, &pulls[k]); err != nil {
-					return fmt.Errorf("Can not push pull_request data: %v", err)
+					return err
 				}
 			}
 		}
@@ -676,7 +672,7 @@ func PushUserAllInfos(contextUser *User) (err error) {
 
 		for j := range branches {
 			if err = PushBranchInfo(user, &branches[j]); err != nil {
-				return fmt.Errorf("Can not push branch data: %v", err)
+				return err
 			}
 		}
 	}
