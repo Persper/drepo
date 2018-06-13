@@ -381,6 +381,25 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 				return fmt.Errorf("Can not add the milestone to the server: %v\n", err)
 			}
 		}
+
+		// Update: milestoneID -> issue - > issueUser
+		issues := make([]Issue, 0)
+		if err := x.Find(&issues, &Issue{MilestoneID: deRepo.Milestones[i].ID}); err != nil {
+			return fmt.Errorf("Can not get issues of the user: %v\n", err)
+		}
+		for j := range issues {
+			issueUsers := make([]IssueUser, 0)
+			if err := x.Find(&issueUsers, &IssueUser{IssueID: issues[j].ID}); err != nil {
+				return fmt.Errorf("Can not get IssueUsers of the issue: %v\n", err)
+			}
+			for k := range issueUsers {
+				_, err := x.Exec("UPDATE `issue_user` SET milestone_id=? WHERE id=?",
+					deRepo.Milestones[i].ID, issueUsers[k].ID)
+				if err != nil {
+					return fmt.Errorf("Can not update milestone_id of the issueUser: %v\n", err)
+				}
+			}
+		}
 	}
 	// ***** END: milestone[] *****
 
@@ -483,26 +502,26 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 }
 
 // Push the repo info to IPFS and record the new ipfsHash in the blockchain
-func PushRepoInfo(modifier *User, repo *Repository) (err error) {
-	if !canPushToBlockchain(modifier) {
+func PushRepoInfo(user *User, repo *Repository) (err error) {
+	if !canPushToBlockchain(user) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
 	// Step0: push the repo content to the IPFS
-	err = PushRepoContent(modifier, repo.RepoPath())
+	err = PushRepoContent(user, repo.RepoPath())
 	if err != nil {
 		return err
 	}
 
 	// step1: push the repo table to the IPFS
 	var access *Access
-	access = &Access{UserID: modifier.ID, RepoID: repo.ID}
+	access = &Access{UserID: user.ID, RepoID: repo.ID}
 	_, err = x.Get(access)
 	if err != nil {
 		return fmt.Errorf("Can not get user access: %v\n", err)
 	}
 
-	if repo.OwnerID == modifier.ID || access.Mode == ACCESS_MODE_OWNER {
+	if repo.OwnerID == user.ID || access.Mode == ACCESS_MODE_OWNER {
 		// Step 1: Encode repo data into JSON format
 		repo_data, err := json.Marshal(repo)
 		if err != nil {
@@ -551,7 +570,7 @@ func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
 	newDeRepo := new(DeRepo)
 	err = json.Unmarshal(repo_data, &newDeRepo)
 	if err != nil {
-		return fmt.Errorf("Can not decode data: %v", err)
+		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
 	// Step4: write into the local database and mkdir the local path
@@ -559,9 +578,8 @@ func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
 	transferDeRepoToRepo(newDeRepo, newRepo)
 	has, err2 := x.Get(newRepo)
 	if err2 != nil {
-		return fmt.Errorf("Can not search the repo: %v\n", err)
+		return fmt.Errorf("Can not search the repo: %v\n", err2)
 	}
-
 	if !has {
 		sess := x.NewSession()
 		defer sess.Close()
@@ -585,8 +603,8 @@ func GetRepoInfo(doer *User, owner *User, repo *Repository) (err error) {
 }
 
 // Push the repo content to IPFS and record the new ipfsHash in the blockchain
-func PushRepoContent(modifier *User, repoPath string) (err error) {
-	if !canPushToBlockchain(modifier) {
+func PushRepoContent(user *User, repoPath string) (err error) {
+	if !canPushToBlockchain(user) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
@@ -597,7 +615,8 @@ func PushRepoContent(modifier *User, repoPath string) (err error) {
 	if err != nil {
 		return fmt.Errorf("Push repoContent to IPFS: fails: %v\n", err)
 	}
-	ipfsHash := strings.Split(string(out), " ")[1]
+	ipfsHashs := strings.Split(string(out), " ")
+	ipfsHash := ipfsHashs[len(ipfsHashs)-2]
 
 	// Step2: Modify the RepoContentIpfsHash in the smart contract
 	// TODO: setRepoContentIpfsHash(ipfsHash)

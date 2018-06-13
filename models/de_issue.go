@@ -30,14 +30,14 @@ func transferIssueUserToDeIssueUser(issueUser *IssueUser, deIssueUser *DeIssueUs
 	deIssueUser.IsClosed = issueUser.IsClosed
 }
 
-func transferDeIssueUserToIssueUser(issue *Issue, repo *Repository, milestone *Milestone,
-	issueUser *IssueUser, deIssueUser *DeIssueUser) {
+func transferDeIssueUserToIssueUser(issue *Issue, repo *Repository,
+	deIssueUser *DeIssueUser, issueUser *IssueUser) {
 	// issueUser.ID can be generated at any time
 	// TODO: issueUser.ID
 	issueUser.UID = deIssueUser.UID
 	issueUser.IssueID = issue.ID
 	issueUser.RepoID = repo.ID
-	issueUser.MilestoneID = milestone.ID
+	// Note: issueUser.MilestoneID = milestone.ID will be restored in deRepo
 	issueUser.IsRead = deIssueUser.IsRead
 	issueUser.IsAssigned = deIssueUser.IsAssigned
 	issueUser.IsMentioned = deIssueUser.IsMentioned
@@ -181,10 +181,9 @@ func transferDeIssueToIssue(repo *Repository, deIssue *DeIssue, issue *Issue) er
 	// ***** END: Comment[] *****
 
 	// ***** START: IssueUser[] *****
-	// TODO: need milestone
-	/*for i := range deIssue.IssueUsers {
+	for i := range deIssue.IssueUsers {
 		issueUser := new(IssueUser)
-		transferDeIssueUserToIssueUser(issue, repo, milestone, &deIssue.IssueUsers[i], issueUser)
+		transferDeIssueUserToIssueUser(issue, repo, &deIssue.IssueUsers[i], issueUser)
 		has, err := x.Get(issueUser)
 		if err != nil {
 			return fmt.Errorf("Can not search the issueUser: %v\n", err)
@@ -195,7 +194,7 @@ func transferDeIssueToIssue(repo *Repository, deIssue *DeIssue, issue *Issue) er
 				return fmt.Errorf("Can not add the issueUser to the server: %v\n", err)
 			}
 		}
-	}*/
+	}
 	// ***** END: IssueUser[] *****
 	return nil
 }
@@ -210,7 +209,7 @@ func PushIssueInfo(user *User, issue *Issue) error {
 	transferIssueToDeIssue(issue, deIssue)
 	issue_data, err := json.Marshal(deIssue)
 	if err != nil {
-		return fmt.Errorf("Can not encode issue data: %v", err)
+		return fmt.Errorf("Can not encode issue data: %v\n", err)
 	}
 
 	// Step 2: Put the encoded data into IPFS
@@ -218,7 +217,7 @@ func PushIssueInfo(user *User, issue *Issue) error {
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
 	if err2 != nil {
-		return fmt.Errorf("Push issue to IPFS: fails: %v", err2)
+		return fmt.Errorf("Push issue to IPFS: fails: %v\n", err2)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
@@ -246,7 +245,7 @@ func GetIssueInfo(user *User, repo *Repository, issue *Issue) error {
 	newDeIssue := new(DeIssue)
 	err = json.Unmarshal(issue_data, &newDeIssue)
 	if err != nil {
-		return fmt.Errorf("Can not decode data: %v", err)
+		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
 	// Step4: write into the local database and mkdir the local path
@@ -254,15 +253,16 @@ func GetIssueInfo(user *User, repo *Repository, issue *Issue) error {
 	transferDeIssueToIssue(repo, newDeIssue, newIssue)
 	has, err2 := x.Get(newIssue)
 	if err2 != nil {
-		return fmt.Errorf("Can not search the issue: %v\n", err)
+		return fmt.Errorf("Can not search the issue: %v\n", err2)
 	}
-
 	if !has {
 		_, err = x.Insert(newIssue)
 		if err != nil {
 			return fmt.Errorf("Can not add the issue to the server: %v\n", err)
 		}
 	}
+
+	// TODO: watch
 
 	return nil
 }

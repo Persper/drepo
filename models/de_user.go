@@ -517,20 +517,19 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 		issues := make([]Issue, 0)
 		if err = x.Find(&issues, &Issue{RepoID: repos[i].ID}); err != nil {
-			return fmt.Errorf("Can not get issues of the repo: %v", err)
+			return fmt.Errorf("Can not get issues of the repo: %v\n", err)
 		}
 		for j := range issues {
 			if err = PushIssueInfo(user, &issues[j]); err != nil {
 				return err
 			}
 
-			pulls := make([]PullRequest, 0)
-			if err = x.Find(&pulls, &PullRequest{IssueID: issues[j].ID}); err != nil {
-				return fmt.Errorf("Can not get pulls of the repo: %v", err)
+			prs := make([]PullRequest, 0)
+			if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
+				return fmt.Errorf("Can not get pulls of the repo: %v\n", err)
 			}
-
-			for k := range pulls {
-				if err = PushPullInfo(user, &pulls[k]); err != nil {
+			for k := range prs {
+				if err = PushPullInfo(user, &prs[k]); err != nil {
 					return err
 				}
 			}
@@ -538,7 +537,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 		branches := make([]ProtectBranch, 0)
 		if err = x.Find(&branches, &ProtectBranch{RepoID: repos[i].ID}); err != nil {
-			return fmt.Errorf("Can not get branches of the repo: %v", err)
+			return fmt.Errorf("Can not get branches of the repo: %v\n", err)
 		}
 		for j := range branches {
 			if err = PushBranchInfo(user, &branches[j]); err != nil {
@@ -552,23 +551,20 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 /// The user button: get the user info and all related tables to IPFS
 func GetUserAndOwnedRepos(uportID string) (err error) {
-	// Step0: get the user table
+	// Step1: get the user table
 	var user *User
 	if user, err = GetUserInfo(uportID); err != nil {
 		return err
 	}
 
-	// Step1: get the owned repo
+	// Step2: get the owned repo
 	// TODO: from the blockchain
 	repos := make([]Repository, 0)
 	for i := range repos {
-		if err := GetRepoInfo(user, user, &repos[i]); err != nil {
-			return err
-		}
 		// TODO: from the blockchain
-		issues := make([]Issue, 0)
-		for j := range issues {
-			if err := GetIssueInfo(user, &repos[i], &issues[j]); err != nil {
+		branches := make([]ProtectBranch, 0)
+		for j := range branches {
+			if err := GetBranchInfo(user, &repos[i], &branches[j]); err != nil {
 				return err
 			}
 		}
@@ -580,11 +576,14 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 			}
 		}
 		// TODO: from the blockchain
-		branches := make([]ProtectBranch, 0)
-		for j := range branches {
-			if err := GetBranchInfo(user, &repos[i], &branches[j]); err != nil {
+		issues := make([]Issue, 0)
+		for j := range issues {
+			if err := GetIssueInfo(user, &repos[i], &issues[j]); err != nil {
 				return err
 			}
+		}
+		if err := GetRepoInfo(user, user, &repos[i]); err != nil {
+			return err
 		}
 	}
 

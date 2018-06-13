@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-// The pull table in the IPFS
 type DeBranch struct {
 	Name               string `xorm:"UNIQUE(protect_branch)"`
 	Protected          bool
@@ -47,26 +46,27 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step 1: Encode branch data into JSON format
+	// Step1: Encode branch data into JSON format
 	deBranch := new(DeBranch)
 	transferBranchToDeBranch(branch, deBranch)
 	branch_data, err := json.Marshal(deBranch)
 	if err != nil {
-		return fmt.Errorf("Can not encode branch data: %v", err)
+		return fmt.Errorf("Can not encode branch data: %v\n", err)
 	}
 
-	// Step 2: Put the encoded data into IPFS
+	// Step2: Put the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", branch_data)
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
 	if err2 != nil {
-		return fmt.Errorf("Push branch to IPFS: fails: %v", err2)
+		return fmt.Errorf("Push branch to IPFS: fails: %v\n", err2)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
-	// Step4: Modify the ipfsHash in the smart contract
+	// Step3: Modify the ipfsHash in the smart contract
 	// TODO: setBranchInfo(ipfsHash)
 	ipfsHash = ipfsHash
+	fmt.Println("Push the protect_branch file to the IPFS: " + ipfsHash)
 
 	return nil
 }
@@ -87,7 +87,7 @@ func GetBranchInfo(user *User, repo *Repository, branch *ProtectBranch) error {
 	newDeBranch := new(DeBranch)
 	err = json.Unmarshal(branch_data, &newDeBranch)
 	if err != nil {
-		return fmt.Errorf("Can not decode data: %v", err)
+		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
 	// Step4: write into the local database and mkdir the local path
@@ -97,13 +97,15 @@ func GetBranchInfo(user *User, repo *Repository, branch *ProtectBranch) error {
 	if err2 != nil {
 		return fmt.Errorf("Can not search the branch: %v\n", err)
 	}
-
 	if !has {
 		_, err = x.Insert(newBranch)
 		if err != nil {
 			return fmt.Errorf("Can not add the branch request to the server: %v\n", err)
 		}
 	}
+
+	// TODO: patch?
+	// TODO: watch
 
 	return nil
 }

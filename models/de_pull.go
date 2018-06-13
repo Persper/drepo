@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-type DePull struct {
+type DePullRequest struct {
 	Type   PullRequestType
 	Status PullRequestStatus
 
@@ -30,102 +30,101 @@ type DePull struct {
 	MergedUnix     int64
 }
 
-func transferPullToDePull(pull *PullRequest, dePull *DePull) {
-	dePull.Type = pull.Type
-	dePull.Status = pull.Status
-	dePull.IssueID = pull.IssueID
-	dePull.Index = pull.Index
-	dePull.HeadRepoID = pull.HeadRepoID
-	dePull.HeadUserName = pull.HeadUserName
-	dePull.HeadBranch = pull.HeadBranch
-	dePull.BaseBranch = pull.BaseBranch
-	dePull.MergeBase = pull.MergeBase
-	dePull.HasMerged = pull.HasMerged
-	dePull.MergedCommitID = pull.MergedCommitID
-	dePull.MergerID = pull.MergerID
-	dePull.MergedUnix = pull.MergedUnix
+func transferPullToDePull(pr *PullRequest, dePr *DePullRequest) {
+	dePr.Type = pr.Type
+	dePr.Status = pr.Status
+	dePr.IssueID = pr.IssueID
+	dePr.Index = pr.Index
+	dePr.HeadRepoID = pr.HeadRepoID
+	dePr.HeadUserName = pr.HeadUserName
+	dePr.HeadBranch = pr.HeadBranch
+	dePr.BaseBranch = pr.BaseBranch
+	dePr.MergeBase = pr.MergeBase
+	dePr.HasMerged = pr.HasMerged
+	dePr.MergedCommitID = pr.MergedCommitID
+	dePr.MergerID = pr.MergerID
+	dePr.MergedUnix = pr.MergedUnix
 }
 
-func transferDePullToPull(dePull *DePull, pull *PullRequest) error {
-	// pull.ID can be generated at any time
-	// TODO: pull.ID
-	// pull.BaseRepoID =
-	pull.Type = dePull.Type
-	pull.Status = dePull.Status
-	pull.IssueID = dePull.IssueID
-	pull.Index = dePull.Index
-	pull.HeadRepoID = dePull.HeadRepoID
-	pull.HeadUserName = dePull.HeadUserName
-	pull.HeadBranch = dePull.HeadBranch
-	pull.BaseBranch = dePull.BaseBranch
-	pull.MergeBase = dePull.MergeBase
-	pull.HasMerged = dePull.HasMerged
-	pull.MergedCommitID = dePull.MergedCommitID
-	pull.MergerID = dePull.MergerID
-	pull.MergedUnix = dePull.MergedUnix
+func transferDePullToPull(repo *Repository, dePr *DePullRequest, pr *PullRequest) error {
+	// pr.ID can be generated at any time
+	// TODO: pr.ID
+	pr.BaseRepoID = repo.ID
+	pr.Type = dePr.Type
+	pr.Status = dePr.Status
+	pr.IssueID = dePr.IssueID
+	pr.Index = dePr.Index
+	pr.HeadRepoID = dePr.HeadRepoID
+	pr.HeadUserName = dePr.HeadUserName
+	pr.HeadBranch = dePr.HeadBranch
+	pr.BaseBranch = dePr.BaseBranch
+	pr.MergeBase = dePr.MergeBase
+	pr.HasMerged = dePr.HasMerged
+	pr.MergedCommitID = dePr.MergedCommitID
+	pr.MergerID = dePr.MergerID
+	pr.MergedUnix = dePr.MergedUnix
 
 	return nil
 }
 
-func PushPullInfo(user *User, pull *PullRequest) error {
+func PushPullInfo(user *User, pr *PullRequest) error {
 	if !canPushToBlockchain(user) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step 1: Encode org data into JSON format
-	dePull := new(DePull)
-	transferPullToDePull(pull, dePull)
-	pull_data, err := json.Marshal(dePull)
+	// Step1: Encode org data into JSON format
+	dePr := new(DePullRequest)
+	transferPullToDePull(pr, dePr)
+	pr_data, err := json.Marshal(dePr)
 	if err != nil {
-		return fmt.Errorf("Can not encode pull_request data: %v", err)
+		return fmt.Errorf("Can not encode pull_request data: %v\n", err)
 	}
 
-	// Step 2: Put the encoded data into IPFS
-	c := fmt.Sprintf("echo '%s' | ipfs add ", pull_data)
+	// Step2: Put the encoded data into IPFS
+	c := fmt.Sprintf("echo '%s' | ipfs add ", pr_data)
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
 	if err2 != nil {
-		return fmt.Errorf("Push pull_request to IPFS: fails: %v", err2)
+		return fmt.Errorf("Push pull_request to IPFS: fails: %v\n", err2)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
-	// Step4: Modify the ipfsHash in the smart contract
+	// Step3: Modify the ipfsHash in the smart contract
 	// TODO: setPullInfo(ipfsHash)
 	ipfsHash = ipfsHash
-	fmt.Println("Push the pullRequest file to the IPFS: " + ipfsHash)
+	fmt.Println("Push the pull_request file to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
-func GetPullInfo(user *User, repo *Repository, pull *PullRequest) error {
+func GetPullInfo(user *User, repo *Repository, pr *PullRequest) error {
 	// Step1: get the issue info hash
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
-	// Step2: get the ipfs file and get the pull data
+	// Step2: get the ipfs file and get the pull_request data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
-	pull_data, err := cmd.Output()
+	pr_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get pull data from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get pull_request data from IPFS: fails: %v\n", err)
 	}
 
-	// Step3: unmarshall pull data
-	newDePull := new(DePull)
-	err = json.Unmarshal(pull_data, &newDePull)
+	// Step3: unmarshall pull_request data
+	newDePr := new(DePullRequest)
+	err = json.Unmarshal(pr_data, &newDePr)
 	if err != nil {
 		return fmt.Errorf("Can not decode data: %v", err)
 	}
 
 	// Step4: write into the local database and mkdir the local path
-	newPull := new(PullRequest)
-	transferDePullToPull(newDePull, newPull)
-	has, err2 := x.Get(newPull)
+	newPr := new(PullRequest)
+	transferDePullToPull(repo, newDePr, newPr)
+	has, err2 := x.Get(newPr)
 	if err2 != nil {
-		return fmt.Errorf("Can not search the pull request: %v\n", err)
+		return fmt.Errorf("Can not search the pull request: %v\n", err2)
 	}
-
 	if !has {
-		_, err = x.Insert(newPull)
+		_, err = x.Insert(newPr)
 		if err != nil {
 			return fmt.Errorf("Can not add the pull request to the server: %v\n", err)
 		}
