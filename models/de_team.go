@@ -162,7 +162,7 @@ func PushTeamInfo(org *User, team *Team) error {
 
 func GetTeamInfo(org *User, team *Team) error {
 	// Step1: get the team info hash
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+	ipfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
 
 	// Step2: get the ipfs file and get the team data
 	c := "ipfs cat " + ipfsHash

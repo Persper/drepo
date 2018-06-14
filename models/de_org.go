@@ -142,7 +142,7 @@ func PushOrgInfo(user *User, org *User) error {
 
 func GetOrgInfo(user *User, org *User) (*User, error) {
 	// Step1: get the user info hash via addrToUserInfo
-	ipfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
+	ipfsHash := "QmXWQDNWkN4j72vM2iriPPxEt6Kz1b6fn42x2rTWFhiZBy"
 
 	// Step2: get the ipfs file and get the org data
 	c := "ipfs cat " + ipfsHash
@@ -274,12 +274,29 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 /// The org button: get the org info and all related tables to IPFS
 func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 	// Just for test
-	/*repo := new(Repository)
-	repo.Name = "testRepo"
-	if err := GetRepoInfo(user, repo); err != nil {
-		return err
-	}
-	return nil*/
+	/*
+		team := new(Team)
+		if err := GetTeamInfo(contextOrg, team); err != nil {
+			return err
+		}
+
+		test_org := new(User)
+		if err := GetOrgInfo(user, test_org); err != nil {
+			return err
+		}
+
+		orgUser := new(OrgUser)
+		if err := GetOrgUserInfo(test_org, orgUser); err != nil {
+			return err
+		}
+
+		repo := new(Repository)
+		repo.Name = "testOrg-Repo"
+		if err := GetRepoInfo(user, repo); err != nil {
+			return err
+		}
+		return nil
+	*/
 
 	// Step1: get the team
 	teams := make([]Team, 0)
