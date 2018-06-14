@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+/// ***** START: DeTeamRepo *****
 type DeTeamRepo struct {
 	RepoID int64 `xorm:"UNIQUE(s)"`
 }
@@ -19,13 +20,17 @@ func transferTeamRepoToDeTeamRepo(teamRepo *TeamRepo, deTeamRepo *DeTeamRepo) {
 	deTeamRepo.RepoID = teamRepo.RepoID
 }
 
-func transferDeTeamRepoToTeamRepo(org *User, team *Team, repo *Repository, deTeamRepo *DeTeamRepo, teamRepo *TeamRepo) {
+func transferDeTeamRepoToTeamRepo(org *User, team *Team, deTeamRepo *DeTeamRepo, teamRepo *TeamRepo) {
+	// teamRepo.ID can be generated at any time
 	// TODO: teamRepo.ID
 	teamRepo.OrgID = org.ID
 	teamRepo.TeamID = team.ID
-	teamRepo.RepoID = repo.ID
+	teamRepo.RepoID = deTeamRepo.RepoID
 }
 
+/// ***** END: DeTeamRepo *****
+
+/// ***** START: DeTeamUser *****
 type DeTeamUser struct {
 	UID int64 `xorm:"UNIQUE(s)"`
 }
@@ -34,22 +39,24 @@ func transferTeamUserToDeTeamUser(teamUser *TeamUser, deTeamUser *DeTeamUser) {
 	deTeamUser.UID = teamUser.UID
 }
 
-func transferDeTeamUserToTeamUser(org *User, team *Team, user *User, teamUser *TeamUser, deTeamUser *DeTeamUser) {
+func transferDeTeamUserToTeamUser(org *User, team *Team, deTeamUser *DeTeamUser, teamUser *TeamUser) {
+	// teamUser.ID can be generated at any time
 	// TODO: teamUser.ID
 	teamUser.OrgID = org.ID
 	teamUser.TeamID = team.ID
-	teamUser.UID = user.ID
+	teamUser.UID = deTeamUser.UID
 }
 
-// The Team table in the IPFS
+/// ***** END: DeTeamUser *****
+
 type DeTeam struct {
 	ID          int64
 	LowerName   string
 	Name        string
 	Description string
 	Authorize   AccessMode
-	TeamRepoID  []int64 `xorm:"-"`
-	TeamUserID  []int64 `xorm:"-"`
+	DeTeamRepos []DeTeamRepo `xorm:"-"`
+	DeTeamUsers []DeTeamUser `xorm:"-"`
 }
 
 func transferTeamToDeTeam(team *Team, deTeam *DeTeam) error {
@@ -59,31 +66,66 @@ func transferTeamToDeTeam(team *Team, deTeam *DeTeam) error {
 	deTeam.Description = team.Description
 	deTeam.Authorize = team.Authorize
 
-	if err := x.Table("team_repo").Cols("repo_id").Find(&deTeam.TeamRepoID); err != nil {
-		return fmt.Errorf("Can not encode team_repo data: %v", err)
+	// ***** START: TeamRepoID[] *****
+	if err := x.Table("team_repo").Cols("repo_id").Find(&deTeam.DeTeamRepos); err != nil {
+		return fmt.Errorf("Can not encode team_repo data: %v\n", err)
 	}
+	// ***** END: TeamRepoID[] *****
 
-	if err := x.Table("team_user").Cols("uid").Find(&deTeam.TeamUserID); err != nil {
-		return fmt.Errorf("Can not encode team_user data: %v", err)
+	// ***** START: TeamUserID[] *****
+	if err := x.Table("team_user").Cols("uid").Find(&deTeam.DeTeamUsers); err != nil {
+		return fmt.Errorf("Can not encode team_user data: %v\n", err)
 	}
+	// ***** END: TeamUserID[] *****
 
 	return nil
 }
 
+/// Prerequisite: team, teamUser
 func transferDeTeamToTeam(org *User, deTeam *DeTeam, team *Team) error {
-	team.OrgID = org.ID
 	team.ID = deTeam.ID
 	team.LowerName = deTeam.LowerName
 	team.Name = deTeam.Name
 	team.Description = deTeam.Description
 	team.Authorize = deTeam.Authorize
 
-	// TODO:
-	// team.NumRepos
-	// team.NumMembers
+	team.OrgID = org.ID
 
-	// TODO:
-	// Restore teamUser/teamRepo
+	// ***** START: NumRepos[] *****
+	for i := range deTeam.DeTeamRepos {
+		teamRepo := new(TeamRepo)
+		transferDeTeamRepoToTeamRepo(org, team, &deTeam.DeTeamRepos[i], teamRepo)
+		has, err := x.Get(teamRepo)
+		if err != nil {
+			return fmt.Errorf("Can not search the teamRepo: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(teamRepo)
+			if err != nil {
+				return fmt.Errorf("Can not add the teamRepo to the server: %v\n", err)
+			}
+		}
+	}
+	team.NumRepos = len(deTeam.DeTeamRepos)
+	// ***** END: NumRepos[] *****
+
+	// ***** START: NumMembers[] *****
+	for i := range deTeam.DeTeamUsers {
+		teamUser := new(TeamUser)
+		transferDeTeamUserToTeamUser(org, team, &deTeam.DeTeamUsers[i], teamUser)
+		has, err := x.Get(teamUser)
+		if err != nil {
+			return fmt.Errorf("Can not search the teamUser: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(teamUser)
+			if err != nil {
+				return fmt.Errorf("Can not add the teamUser to the server: %v\n", err)
+			}
+		}
+	}
+	team.NumMembers = len(deTeam.DeTeamUsers)
+	// ***** END: NumMembers[] *****
 
 	return nil
 }
