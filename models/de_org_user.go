@@ -22,7 +22,7 @@ func transferOrgUserToDeOrgUser(orgUser *OrgUser, deOrgUser *DeOrgUser) {
 }
 
 /// Prerequisite: team, teamUser
-func transferDeOrgUserToOrgUser(user *User, org *User, deOrgUser *DeOrgUser, orgUser *OrgUser) error {
+func transferDeOrgUserToOrgUser(org *User, deOrgUser *DeOrgUser, orgUser *OrgUser) error {
 	// orgUser.ID can be generated at any time
 	// TODO: orgUser.ID
 	orgUser.Uid = deOrgUser.Uid
@@ -31,7 +31,7 @@ func transferDeOrgUserToOrgUser(user *User, org *User, deOrgUser *DeOrgUser, org
 
 	// ***** START: NumTeams and IsOwner *****
 	teamUsers := make([]TeamUser, 0)
-	if err := x.Find(&teamUsers, &TeamUser{OrgID: org.ID, UID: user.ID}); err != nil {
+	if err := x.Find(&teamUsers, &TeamUser{OrgID: org.ID, UID: deOrgUser.Uid}); err != nil {
 		return fmt.Errorf("Can not get teamUsers of the orgUser: %v\n", err)
 	}
 	orgUser.NumTeams = len(teamUsers)
@@ -82,7 +82,7 @@ func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 	return nil
 }
 
-func GetOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
+func GetOrgUserInfo(org *User, orgUser *OrgUser) error {
 	// Step1: get the issue info hash
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
@@ -103,7 +103,7 @@ func GetOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 
 	// Step4: write into the local database
 	newOU := new(OrgUser)
-	transferDeOrgUserToOrgUser(user, org, newDeOU, newOU)
+	transferDeOrgUserToOrgUser(org, newDeOU, newOU)
 	has, err2 := x.Get(newOU)
 	if err2 != nil {
 		return fmt.Errorf("Can not search the org_user: %v\n", err2)
