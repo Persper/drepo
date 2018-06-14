@@ -29,17 +29,25 @@ func transferDeOrgUserToOrgUser(user *User, org *User, deOrgUser *DeOrgUser, org
 	orgUser.IsPublic = deOrgUser.IsPublic
 	orgUser.OrgID = org.ID
 
-	// TODO: restore from team_user and team?
-	// orgUser.IsOwner
-
-	// ***** START: NumTeams *****
-	team := new(Team)
-	total, err := x.Where("org_id = ?", org.ID).Count(team)
-	if err != nil {
-		return fmt.Errorf("Can not get org teams: %v", err)
+	// ***** START: NumTeams and IsOwner *****
+	teamUsers := make([]TeamUser, 0)
+	if err := x.Find(&teamUsers, &TeamUser{OrgID: org.ID, UID: user.ID}); err != nil {
+		return fmt.Errorf("Can not get teamUsers of the orgUser: %v\n", err)
 	}
-	orgUser.NumTeams = int(total)
-	// ***** END: NumTeams *****
+	orgUser.NumTeams = len(teamUsers)
+	orgUser.IsOwner = false
+	for i := range teamUsers {
+		var team *Team
+		team = &Team{ID: teamUsers[i].TeamID}
+		_, err := x.Get(team)
+		if err != nil {
+			return fmt.Errorf("Can not get team data: %v\n", err)
+		}
+		if team.Authorize == ACCESS_MODE_OWNER {
+			orgUser.IsOwner = true
+		}
+	}
+	// ***** END: NumTeams and IsOwner *****
 
 	return nil
 }

@@ -43,7 +43,7 @@ func transferOrgToDeOrg(org *User, deOrg *DeOrg) {
 	deOrg.UseCustomAvatar = org.UseCustomAvatar
 }
 
-/// Prerequisite: teamUser, team, repo
+/// Prerequisite: teamUser, teamUser
 func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	org.ID = deOrg.ID
 	org.Name = deOrg.Name
