@@ -206,7 +206,7 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 
 	// Step3: push orgUser
 	orgUsers := make([]OrgUser, 0)
-	if err = x.Find(&orgUsers, &OrgUser{Uid: org.ID}); err != nil {
+	if err = x.Find(&orgUsers, &OrgUser{OrgID: org.ID}); err != nil {
 		return fmt.Errorf("Can not get orgUsers of the org: %v\n", err)
 	}
 	for i := range orgUsers {
