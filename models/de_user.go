@@ -484,7 +484,7 @@ func GetUserInfo(uportID string) (user *User, err error) {
 	return newUser, nil
 }
 
-/// The user button: Push the user info and all related tables to IPFS
+/// The user button: push the user info and all related tables to IPFS
 func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
