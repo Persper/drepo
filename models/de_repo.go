@@ -698,13 +698,13 @@ func GetRepoContentByDegit(modifier *User) (err error) {
 	return nil
 }
 
-/// Push the repo info and all related tables to IPFS
+/// The repo button: push the repo info and all related tables to IPFS
 func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step0: get the corresponding user.
+	// Step1: get the corresponding user.
 	var user *User
 	user = &User{ID: contextUser.ID}
 	_, err = x.Get(user)
@@ -712,7 +712,7 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 		return fmt.Errorf("Can not get user data: %v", err)
 	}
 
-	// Step1: push the repo
+	// Step2: push the repo
 	if err = PushRepoInfo(user, repo); err != nil {
 		return fmt.Errorf("Can not push repo data: %v", err)
 	}
@@ -726,13 +726,13 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 			return fmt.Errorf("Can not push issue data: %v", err)
 		}
 
-		pulls := make([]PullRequest, 0)
-		if err = x.Find(&pulls, &PullRequest{IssueID: issues[j].ID}); err != nil {
-			return fmt.Errorf("Can not get pulls of the repo: %v", err)
+		prs := make([]PullRequest, 0)
+		if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
+			return fmt.Errorf("Can not get pull_request of the repo: %v", err)
 		}
 
-		for k := range pulls {
-			if err = PushPullInfo(user, &pulls[k]); err != nil {
+		for k := range prs {
+			if err = PushPullInfo(user, &prs[k]); err != nil {
 				return fmt.Errorf("Can not push pull_request data: %v", err)
 			}
 		}
@@ -745,6 +745,49 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 	for j := range branches {
 		if err = PushBranchInfo(user, &branches[j]); err != nil {
 			return fmt.Errorf("Can not push branch data: %v", err)
+		}
+	}
+
+	return nil
+}
+
+/// The repo button: get the repo info and all related tables to IPFS
+func GetRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
+	// Step1: get the corresponding user.
+	var user *User
+	user = &User{ID: contextUser.ID}
+	_, err = x.Get(user)
+	if err != nil {
+		return fmt.Errorf("Can not get user data: %v", err)
+	}
+
+	// Step2: get the owned repo
+	// TODO: from the blockchain
+	repos := make([]Repository, 0)
+	for i := range repos {
+		// TODO: from the blockchain
+		branches := make([]ProtectBranch, 0)
+		for j := range branches {
+			if err := GetBranchInfo(user, &repos[i], &branches[j]); err != nil {
+				return err
+			}
+		}
+		// TODO: from the blockchain
+		pulls := make([]PullRequest, 0)
+		for j := range pulls {
+			if err := GetPullInfo(user, &repos[i], &pulls[j]); err != nil {
+				return err
+			}
+		}
+		// TODO: from the blockchain
+		issues := make([]Issue, 0)
+		for j := range issues {
+			if err := GetIssueInfo(user, &repos[i], &issues[j]); err != nil {
+				return err
+			}
+		}
+		if err := GetRepoInfo(user, &repos[i]); err != nil {
+			return err
 		}
 	}
 

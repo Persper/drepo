@@ -490,7 +490,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step0: get the corresponding user.
+	// Step1: get the corresponding user.
 	var user *User
 	user = &User{ID: contextUser.ID}
 	_, err = x.Get(user)
@@ -498,13 +498,13 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 		return fmt.Errorf("Can not get user data: %v\n", err)
 	}
 
-	// Step1: push user
+	// Step2: push user
 	// TODO: check update or create
 	if err := PushUserInfo(user, 1); err != nil {
 		return err
 	}
 
-	// Step2: push the owned repo
+	// Step3: push the owned repo
 	repos := make([]Repository, 0)
 	if err = x.Find(&repos, &Repository{OwnerID: user.ID}); err != nil {
 		return fmt.Errorf("Can not get owned repos of the user: %v\n", err)
@@ -526,7 +526,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 			prs := make([]PullRequest, 0)
 			if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
-				return fmt.Errorf("Can not get pulls of the repo: %v\n", err)
+				return fmt.Errorf("Can not get pull_request of the repo: %v\n", err)
 			}
 			for k := range prs {
 				if err = PushPullInfo(user, &prs[k]); err != nil {
