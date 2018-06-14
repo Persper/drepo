@@ -116,7 +116,7 @@ func GetPullInfo(user *User, repo *Repository, pr *PullRequest) error {
 		return fmt.Errorf("Can not decode data: %v", err)
 	}
 
-	// Step4: write into the local database and mkdir the local path
+	// Step4: write into the local database
 	newPr := new(PullRequest)
 	transferDePullToPull(repo, newDePr, newPr)
 	has, err2 := x.Get(newPr)

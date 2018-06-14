@@ -130,10 +130,10 @@ func transferDeTeamToTeam(org *User, deTeam *DeTeam, team *Team) error {
 	return nil
 }
 
-func PushTeamInfo(user *User, team *Team) error {
-	if !canPushToBlockchain(user) {
+func PushTeamInfo(org *User, team *Team) error {
+	/*if !canPushToBlockchain(org) {
 		return fmt.Errorf("The user can not push to the blockchain")
-	}
+	}*/
 
 	// Step 1: Encode team data into JSON format
 	deTeam := new(DeTeam)
@@ -155,11 +155,43 @@ func PushTeamInfo(user *User, team *Team) error {
 	// Step4: Modify the ipfsHash in the smart contract
 	// TODO: setTeamInfo(ipfsHash)
 	ipfsHash = ipfsHash
+	fmt.Println("Push the team to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
-func GetTeamInfo() error {
-	// TODO
+func GetTeamInfo(org *User, team *Team) error {
+	// Step1: get the team info hash
+	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+
+	// Step2: get the ipfs file and get the team data
+	c := "ipfs cat " + ipfsHash
+	cmd := exec.Command("sh", "-c", c)
+	team_data, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Get team data from IPFS: fails: %v\n", err)
+	}
+
+	// Step3: unmarshall team data
+	newDeTeam := new(DeTeam)
+	err = json.Unmarshal(team_data, &newDeTeam)
+	if err != nil {
+		return fmt.Errorf("Can not decode data: %v\n", err)
+	}
+
+	// Step4: write into the local database
+	newTeam := new(Team)
+	transferDeTeamToTeam(org, newDeTeam, newTeam)
+	has, err2 := x.Get(newTeam)
+	if err2 != nil {
+		return fmt.Errorf("Can not search the team: %v\n", err2)
+	}
+	if !has {
+		_, err = x.Insert(newTeam)
+		if err != nil {
+			return fmt.Errorf("Can not add the newTeam to the server: %v\n", err)
+		}
+	}
+
 	return nil
 }

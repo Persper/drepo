@@ -7,6 +7,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -21,9 +22,10 @@ type DeOrg struct {
 	Rands              string `xorm:"VARCHAR(10)"`
 	Salt               string `xorm:"VARCHAR(10)"`
 	CreatedUnix        int64
+	UpdatedUnix        int64
 	LastRepoVisibility bool
-	UseCustomAvatar    bool
 	Description        string
+	UseCustomAvatar    bool
 }
 
 func transferOrgToDeOrg(org *User, deOrg *DeOrg) {
@@ -35,11 +37,13 @@ func transferOrgToDeOrg(org *User, deOrg *DeOrg) {
 	deOrg.Rands = org.Rands
 	deOrg.Salt = org.Salt
 	deOrg.CreatedUnix = org.CreatedUnix
+	deOrg.UpdatedUnix = org.UpdatedUnix
 	deOrg.LastRepoVisibility = org.LastRepoVisibility
 	deOrg.Description = org.Description
 	deOrg.UseCustomAvatar = org.UseCustomAvatar
 }
 
+/// Prerequisite: teamUser, team, repo
 func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	org.ID = deOrg.ID
 	org.Name = deOrg.Name
@@ -49,6 +53,7 @@ func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	org.Rands = deOrg.Rands
 	org.Salt = deOrg.Salt
 	org.CreatedUnix = deOrg.CreatedUnix
+	org.UpdatedUnix = deOrg.UpdatedUnix
 	org.LastRepoVisibility = deOrg.LastRepoVisibility
 	org.Description = deOrg.Description
 	org.UseCustomAvatar = deOrg.UseCustomAvatar
@@ -60,43 +65,30 @@ func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	org.MaxRepoCreation = -1
 	org.IsAdmin = false
 
-	// TODO: the follow and star table is lost
-	// ***** START: NumFollowers *****
-	follow := new(Follow)
-	total, err := x.Where("follow_id = ?", org.ID).Count(follow)
-	if err != nil {
-		return fmt.Errorf("Can not get org numfollowers: %v", err)
-	}
-	org.NumFollowers = int(total)
-	// ***** END: NumFollowers *****
+	// Not need for the organization:
+	// org.Email
+	// org.Passwd
+	// org.LoginType
+	// org.LoginSource
+	// org.LoginName
+	// org.Avatar
+	// org.AvatarEmail
 
-	// ***** START: NumFollowing *****
-	total, err = x.Where("user_id = ?", org.ID).Count(follow)
-	if err != nil {
-		return fmt.Errorf("Can not get org numfollowing: %v", err)
-	}
-	org.NumFollowing = int(total)
-	// ***** END: NumFollowing *****
-
-	// star is useless
-	// ***** START: NumStars *****
+	// TODO: not sure
+	org.UportId = ""
+	org.IsActive = true
+	org.AllowGitHook = false
+	org.AllowImportLocal = false
+	org.ProhibitLogin = false
+	org.NumFollowers = 0
+	org.NumFollowing = 0
 	org.NumStars = 0
-	// ***** END: NumStars *****
-
-	// ***** START: NumRepos *****
-	repo := new(Repository)
-	total, err = x.Where("owner_id = ?", org.ID).Count(repo)
-	if err != nil {
-		return fmt.Errorf("Can not get org numRepos: %v", err)
-	}
-	org.NumRepos = int(total)
-	// ***** END: NumRepos *****
 
 	// ***** START: NumTeams *****
 	team := new(Team)
-	total, err = x.Where("org_id = ?", org.ID).Count(team)
+	total, err := x.Where("org_id = ?", org.ID).Count(team)
 	if err != nil {
-		return fmt.Errorf("Can not get org teams: %v", err)
+		return fmt.Errorf("Can not get org teams: %v\n", err)
 	}
 	org.NumTeams = int(total)
 	// ***** END: NumTeams *****
@@ -105,17 +97,15 @@ func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 	teamUser := new(TeamUser)
 	total, err = x.Where("org_id = ?", org.ID).Count(teamUser)
 	if err != nil {
-		return fmt.Errorf("Can not get org team_user: %v", err)
+		return fmt.Errorf("Can not get org team_user: %v\n", err)
 	}
 	org.NumMembers = int(total)
 	// ***** END: NumMembers *****
 
-	// TODO: not sure
-	// user.UportId
-	org.IsActive = true
-	org.AllowGitHook = false
-	org.AllowImportLocal = false
-	org.ProhibitLogin = false
+	// ***** START: NumRepos *****
+	// Note: the numRepos is only used for the user rather than the organization ?
+	org.NumRepos = 0
+	// ***** END: NumRepos *****
 
 	return nil
 }
@@ -143,14 +133,55 @@ func PushOrgInfo(user *User, org *User) error {
 	ipfsHash := strings.Split(string(out), " ")[1]
 
 	// Step4: Modify the ipfsHash in the smart contract
-	// TODO: setOrgUserInfo(ipfsHash)
+	// TODO: setOrgInfo(ipfsHash)
 	ipfsHash = ipfsHash
+	fmt.Println("Push the org info to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
 func GetOrgInfo(user *User, org *User) error {
-	// TODO
+	// Step1: get the user info hash via addrToUserInfo
+	ipfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
+
+	// Step2: get the ipfs file and get the org data
+	c := "ipfs cat " + ipfsHash
+	cmd := exec.Command("sh", "-c", c)
+	org_data, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Can not get org data from IPFS: %v\n", err)
+	}
+
+	// Step3: unmarshall org data
+	newDeOrg := new(DeOrg)
+	err = json.Unmarshal(org_data, &newDeOrg)
+	if err != nil {
+		return fmt.Errorf("Can not decode org data: %v\n", err)
+	}
+
+	// Step4: write into the local database and mkdir the org path
+	newOrg := new(User)
+	transferDeOrgToOrg(newDeOrg, newOrg)
+	has, err := x.Get(newOrg)
+	if err != nil {
+		return fmt.Errorf("Can not search the org: %v\n", err)
+	}
+	if !has {
+		sess := x.NewSession()
+		defer sess.Close()
+		if err = sess.Begin(); err != nil {
+			return err
+		}
+
+		if _, err = sess.Insert(newOrg); err != nil {
+			return err
+		} else if err = os.MkdirAll(UserPath(newOrg.Name), os.ModePerm); err != nil {
+			return err
+		}
+
+		return sess.Commit()
+	}
+
 	return nil
 }
 

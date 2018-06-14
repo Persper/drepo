@@ -78,7 +78,7 @@ func GetOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 	// Step1: get the issue info hash
 	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
-	// Step2: get the ipfs file and get the pull_request data
+	// Step2: get the ipfs file and get the org_user data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	orgUser_data, err := cmd.Output()
@@ -86,14 +86,14 @@ func GetOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 		return fmt.Errorf("Get org_user data from IPFS: fails: %v\n", err)
 	}
 
-	// Step3: unmarshall pull_request data
+	// Step3: unmarshall org_user data
 	newDeOU := new(DeOrgUser)
 	err = json.Unmarshal(orgUser_data, &newDeOU)
 	if err != nil {
 		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step4: write into the local database and mkdir the local path
+	// Step4: write into the local database
 	newOU := new(OrgUser)
 	transferDeOrgUserToOrgUser(user, org, newDeOU, newOU)
 	has, err2 := x.Get(newOU)
