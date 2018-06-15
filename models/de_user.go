@@ -438,9 +438,9 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 }
 
 // Get the new ipfsHash from the blockchain and get the user info from IPFS
-func GetUserInfo(uportID string) (user *User, err error) {
+func GetUserInfo(uportID string, ipfsHash string) (user *User, err error) {
 	// Step1: get the user info hash via addrToUserInfo
-	ipfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
+	// TODO:
 
 	// Step2: get the ipfs file and get the user data
 	c := "ipfs cat " + ipfsHash
@@ -551,23 +551,30 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 
 /// The user button: get the user info and all related tables to IPFS
 func GetUserAndOwnedRepos(uportID string) (err error) {
-	// Step1: get the user table
-	var user *User
-	if user, err = GetUserInfo(uportID); err != nil {
+	// Just for test
+	var testUser *User
+	testIpfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
+	if testUser, err = GetUserInfo(uportID, testIpfsHash); err != nil {
 		return err
 	}
 
-	// Just for test
 	repo := new(Repository)
-	if err := GetRepoAndRelatedTables(user, repo); err != nil {
+	if err := GetRepoAndRelatedTables(testUser, repo); err != nil {
 		return err
 	}
 
 	org := new(User)
-	if err := GetOrgAndRelatedTables(user, org); err != nil {
+	if err := GetOrgAndRelatedTables(testUser, org); err != nil {
 		return err
 	}
 	return nil
+
+	// Step1: get the user table
+	var user *User
+	ipfsHash := ""
+	if user, err = GetUserInfo(uportID, ipfsHash); err != nil {
+		return err
+	}
 
 	// Step2: get the owned repo
 	// TODO: from the blockchain
@@ -591,7 +598,7 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 
 /// Uncompleted
 /// TODO: Push the user info and all related tables to IPFS
-func PushUserAllInfos(contextUser *User) (err error) {
+/*func PushUserAllInfos(contextUser *User) (err error) {
 	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
@@ -695,4 +702,4 @@ func PushUserAllInfos(contextUser *User) (err error) {
 	}
 
 	return nil
-}
+}*/
