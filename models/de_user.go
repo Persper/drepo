@@ -558,39 +558,18 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 	}
 
 	// Just for test
-	/*repo := new(Repository)
+	repo := new(Repository)
 	repo.Name = "testRepo"
 	if err := GetRepoInfo(user, repo); err != nil {
 		return err
 	}
-	return nil*/
+	return nil
 
 	// Step2: get the owned repo
 	// TODO: from the blockchain
 	repos := make([]Repository, 0)
 	for i := range repos {
-		// TODO: from the blockchain
-		branches := make([]ProtectBranch, 0)
-		for j := range branches {
-			if err := GetBranchInfo(user, &repos[i], &branches[j]); err != nil {
-				return err
-			}
-		}
-		// TODO: from the blockchain
-		pulls := make([]PullRequest, 0)
-		for j := range pulls {
-			if err := GetPullInfo(user, &repos[i], &pulls[j]); err != nil {
-				return err
-			}
-		}
-		// TODO: from the blockchain
-		issues := make([]Issue, 0)
-		for j := range issues {
-			if err := GetIssueInfo(user, &repos[i], &issues[j]); err != nil {
-				return err
-			}
-		}
-		if err := GetRepoInfo(user, &repos[i]); err != nil {
+		if err := GetRepoAndRelatedTables(user, &repos[i]); err != nil {
 			return err
 		}
 	}

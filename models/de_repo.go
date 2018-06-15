@@ -754,43 +754,30 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 }
 
 /// The repo button: get the repo info and all related tables to IPFS
-func GetRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
-	// Step1: get the corresponding user.
-	var user *User
-	user = &User{ID: contextUser.ID}
-	_, err = x.Get(user)
-	if err != nil {
-		return fmt.Errorf("Can not get user data: %v", err)
-	}
-
-	// Step2: get the owned repo
+func GetRepoAndRelatedTables(user *User, repo *Repository) (err error) {
 	// TODO: from the blockchain
-	repos := make([]Repository, 0)
-	for i := range repos {
-		// TODO: from the blockchain
-		branches := make([]ProtectBranch, 0)
-		for j := range branches {
-			if err := GetBranchInfo(user, &repos[i], &branches[j]); err != nil {
-				return err
-			}
-		}
-		// TODO: from the blockchain
-		pulls := make([]PullRequest, 0)
-		for j := range pulls {
-			if err := GetPullInfo(user, &repos[i], &pulls[j]); err != nil {
-				return err
-			}
-		}
-		// TODO: from the blockchain
-		issues := make([]Issue, 0)
-		for j := range issues {
-			if err := GetIssueInfo(user, &repos[i], &issues[j]); err != nil {
-				return err
-			}
-		}
-		if err := GetRepoInfo(user, &repos[i]); err != nil {
+	branches := make([]ProtectBranch, 0)
+	for i := range branches {
+		if err := GetBranchInfo(user, repo, &branches[i]); err != nil {
 			return err
 		}
+	}
+	// TODO: from the blockchain
+	pulls := make([]PullRequest, 0)
+	for i := range pulls {
+		if err := GetPullInfo(user, repo, &pulls[i]); err != nil {
+			return err
+		}
+	}
+	// TODO: from the blockchain
+	issues := make([]Issue, 0)
+	for i := range issues {
+		if err := GetIssueInfo(user, repo, &issues[i]); err != nil {
+			return err
+		}
+	}
+	if err := GetRepoInfo(user, repo); err != nil {
+		return err
 	}
 
 	return nil

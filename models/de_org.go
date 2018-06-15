@@ -274,29 +274,29 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 /// The org button: get the org info and all related tables to IPFS
 func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 	// Just for test
-	/*
-		team := new(Team)
-		if err := GetTeamInfo(contextOrg, team); err != nil {
-			return err
-		}
+	// Need org ID
+	// contextOrg.ID = 2
+	team := new(Team)
+	if err := GetTeamInfo(contextOrg, team); err != nil {
+		return err
+	}
 
-		test_org := new(User)
-		if err := GetOrgInfo(user, test_org); err != nil {
-			return err
-		}
+	test_org := new(User)
+	if test_org, err = GetOrgInfo(user, test_org); err != nil {
+		return err
+	}
 
-		orgUser := new(OrgUser)
-		if err := GetOrgUserInfo(test_org, orgUser); err != nil {
-			return err
-		}
+	orgUser := new(OrgUser)
+	if err = GetOrgUserInfo(test_org, orgUser); err != nil {
+		return err
+	}
 
-		repo := new(Repository)
-		repo.Name = "testOrg-Repo"
-		if err := GetRepoInfo(user, repo); err != nil {
-			return err
-		}
-		return nil
-	*/
+	repo := new(Repository)
+	repo.Name = "test_org_repo"
+	if err = GetRepoInfo(test_org, repo); err != nil {
+		return err
+	}
+	return nil
 
 	// Step1: get the team
 	teams := make([]Team, 0)
