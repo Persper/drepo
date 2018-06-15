@@ -558,38 +558,39 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 		return err
 	}
 
-	repo := new(Repository)
-	if err := GetRepoAndRelatedTables(testUser, repo); err != nil {
+	testIpfsHash = "Qmcodn79uJF7GE9vqQFhD9u4cRMFe5vAMHV7zieHvepBLp"
+	if err := GetRepoAndRelatedTables(testUser, testIpfsHash); err != nil {
 		return err
 	}
 
-	org := new(User)
-	if err := GetOrgAndRelatedTables(testUser, org); err != nil {
+	testIpfsHash = "QmXWQDNWkN4j72vM2iriPPxEt6Kz1b6fn42x2rTWFhiZBy"
+	if err := GetOrgAndRelatedTables(testUser, testIpfsHash); err != nil {
 		return err
 	}
 	return nil
 
 	// Step1: get the user table
+	// TODO: from the blockchain
+	userHash := ""
 	var user *User
-	ipfsHash := ""
-	if user, err = GetUserInfo(uportID, ipfsHash); err != nil {
+	if user, err = GetUserInfo(uportID, userHash); err != nil {
 		return err
 	}
 
 	// Step2: get the owned repo
 	// TODO: from the blockchain
-	repos := make([]Repository, 0)
-	for i := range repos {
-		if err := GetRepoAndRelatedTables(user, &repos[i]); err != nil {
+	repoHashes := make([]string, 0)
+	for i := range repoHashes {
+		if err := GetRepoAndRelatedTables(user, repoHashes[i]); err != nil {
 			return err
 		}
 	}
 
 	// Step3: get the owned org
 	// TODO: from the blockchain
-	orgs := make([]User, 0)
-	for i := range orgs {
-		if err := GetOrgAndRelatedTables(user, &orgs[i]); err != nil {
+	orgHashes := make([]string, 0)
+	for i := range orgHashes {
+		if err := GetOrgAndRelatedTables(user, orgHashes[i]); err != nil {
 			return err
 		}
 	}

@@ -556,24 +556,22 @@ func PushRepoInfo(user *User, repo *Repository) (err error) {
 }
 
 // Get the new ipfsHash from the blockchain and get the repo info from IPFS
-func GetRepoInfo(user *User, repo *Repository) (err error) {
+func GetRepoInfo(user *User, ipfsHash string) (*Repository, error) {
 	// Step1: get the repo info hash
-	ipfsHash := "Qmcodn79uJF7GE9vqQFhD9u4cRMFe5vAMHV7zieHvepBLp"
-	// QmRek6nweuGM5HdvAPx4pkY16WDuVq9WRHeU9pC1qiz5rq
 
 	// Step2: get the ipfs file and get the user data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	repo_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get Repo data from IPFS: fails: %v\n", err)
+		return nil, fmt.Errorf("Get Repo data from IPFS: fails: %v\n", err)
 	}
 
 	// Step3: unmarshall user data
 	newDeRepo := new(DeRepo)
 	err = json.Unmarshal(repo_data, &newDeRepo)
 	if err != nil {
-		return fmt.Errorf("Can not decode data: %v\n", err)
+		return nil, fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
 	// Step4: write into the local database and mkdir the local path
@@ -581,42 +579,42 @@ func GetRepoInfo(user *User, repo *Repository) (err error) {
 	transferDeRepoToRepo(newDeRepo, newRepo)
 	has, err2 := x.Get(newRepo)
 	if err2 != nil {
-		return fmt.Errorf("Can not search the repo: %v\n", err2)
+		return nil, fmt.Errorf("Can not search the repo: %v\n", err2)
 	}
 
 	if !has {
 		sess := x.NewSession()
 		defer sess.Close()
 		if err = sess.Begin(); err != nil {
-			return err
+			return nil, err
 		}
 
 		has, err = x.Get(newRepo)
 		if err != nil {
-			return fmt.Errorf("Can not get the repo: %v\n", err2)
+			return nil, fmt.Errorf("Can not get the repo: %v\n", err2)
 		}
 		if !has {
 			if _, err = sess.Insert(newRepo); err != nil {
-				return fmt.Errorf("Can not insert the repo: %v\n", err)
+				return nil, fmt.Errorf("Can not insert the repo: %v\n", err)
 			}
 			user.NumRepos++
 			if _, err = sess.Update(user); err != nil {
-				return fmt.Errorf("Can not update the user: %v\n", err)
+				return nil, fmt.Errorf("Can not update the user: %v\n", err)
 			}
 
-			repoPath := RepoPath(user.Name, repo.Name)
+			repoPath := RepoPath(user.Name, newRepo.Name)
 			fmt.Println("repopath:" + repoPath)
 			if err := GetRepoContent(user, repoPath); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
-		return sess.Commit()
+		return newRepo, sess.Commit()
 	}
 
 	// TODO: watch
 
-	return nil
+	return nil, nil
 }
 
 // Push the repo content to IPFS and record the new ipfsHash in the blockchain
@@ -754,10 +752,10 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 }
 
 /// The repo button: get the repo info and all related tables to IPFS
-func GetRepoAndRelatedTables(user *User, repo *Repository) (err error) {
+func GetRepoAndRelatedTables(user *User, ipfsHash string) (err error) {
 	// Just for test
-	repo.Name = "testRepo"
-	if err = GetRepoInfo(user, repo); err != nil {
+	var repo *Repository
+	if repo, err = GetRepoInfo(user, ipfsHash); err != nil {
 		return err
 	}
 	return nil
@@ -783,7 +781,7 @@ func GetRepoAndRelatedTables(user *User, repo *Repository) (err error) {
 			return err
 		}
 	}
-	if err := GetRepoInfo(user, repo); err != nil {
+	if _, err := GetRepoInfo(user, ipfsHash); err != nil {
 		return err
 	}
 

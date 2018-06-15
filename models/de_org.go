@@ -140,9 +140,9 @@ func PushOrgInfo(user *User, org *User) error {
 	return nil
 }
 
-func GetOrgInfo(user *User, org *User) (*User, error) {
+func GetOrgInfo(user *User, ipfsHash string) (*User, error) {
 	// Step1: get the user info hash via addrToUserInfo
-	ipfsHash := "QmXWQDNWkN4j72vM2iriPPxEt6Kz1b6fn42x2rTWFhiZBy"
+	//
 
 	// Step2: get the ipfs file and get the org data
 	c := "ipfs cat " + ipfsHash
@@ -272,16 +272,16 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 }
 
 /// The org button: get the org info and all related tables to IPFS
-func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
+func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	// Just for test
-	contextOrg.ID = 2
+	contextOrg := &User{ID: 2}
 	team := new(Team)
 	if err := GetTeamInfo(contextOrg, team); err != nil {
 		return err
 	}
 
 	test_org := new(User)
-	if test_org, err = GetOrgInfo(user, test_org); err != nil {
+	if test_org, err = GetOrgInfo(user, ipfsHash); err != nil {
 		return err
 	}
 
@@ -290,9 +290,9 @@ func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 		return err
 	}
 
-	repo := new(Repository)
-	repo.Name = "test_org_repo"
-	if err = GetRepoInfo(test_org, repo); err != nil {
+	ipfsHash = "QmRek6nweuGM5HdvAPx4pkY16WDuVq9WRHeU9pC1qiz5rq"
+	//repo.Name = "test_org_repo"
+	if _, err = GetRepoInfo(test_org, ipfsHash); err != nil {
 		return err
 	}
 	return nil
@@ -307,7 +307,7 @@ func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 
 	// Step2: get the org
 	var org *User
-	if org, err = GetOrgInfo(user, contextOrg); err != nil {
+	if org, err = GetOrgInfo(user, ipfsHash); err != nil {
 		return err
 	}
 
@@ -321,30 +321,9 @@ func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 
 	// Step1: get the owned repo
 	// TODO: from the blockchain
-	repos := make([]Repository, 0)
-	for i := range repos {
-		// TODO: from the blockchain
-		branches := make([]ProtectBranch, 0)
-		for j := range branches {
-			if err := GetBranchInfo(org, &repos[i], &branches[j]); err != nil {
-				return err
-			}
-		}
-		// TODO: from the blockchain
-		pulls := make([]PullRequest, 0)
-		for j := range pulls {
-			if err := GetPullInfo(org, &repos[i], &pulls[j]); err != nil {
-				return err
-			}
-		}
-		// TODO: from the blockchain
-		issues := make([]Issue, 0)
-		for j := range issues {
-			if err := GetIssueInfo(org, &repos[i], &issues[j]); err != nil {
-				return err
-			}
-		}
-		if err := GetRepoInfo(org, &repos[i]); err != nil {
+	repoHashes := make([]string, 0)
+	for i := range repoHashes {
+		if err := GetRepoAndRelatedTables(org, repoHashes[i]); err != nil {
 			return err
 		}
 	}
