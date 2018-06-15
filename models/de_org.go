@@ -274,8 +274,7 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 /// The org button: get the org info and all related tables to IPFS
 func GetOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 	// Just for test
-	// Need org ID
-	// contextOrg.ID = 2
+	contextOrg.ID = 2
 	team := new(Team)
 	if err := GetTeamInfo(contextOrg, team); err != nil {
 		return err

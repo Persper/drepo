@@ -755,6 +755,13 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 
 /// The repo button: get the repo info and all related tables to IPFS
 func GetRepoAndRelatedTables(user *User, repo *Repository) (err error) {
+	// Just for test
+	repo.Name = "testRepo"
+	if err = GetRepoInfo(user, repo); err != nil {
+		return err
+	}
+	return nil
+
 	// TODO: from the blockchain
 	branches := make([]ProtectBranch, 0)
 	for i := range branches {
