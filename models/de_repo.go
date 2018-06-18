@@ -768,9 +768,9 @@ func GetRepoAndRelatedTables(user *User, ipfsHash string) (err error) {
 		}
 	}
 	// TODO: from the blockchain
-	pulls := make([]PullRequest, 0)
-	for i := range pulls {
-		if err := GetPullInfo(user, repo, &pulls[i]); err != nil {
+	prHashes := make([]string, 0)
+	for i := range prHashes {
+		if err := GetPullInfo(user, repo, prHashes[i]); err != nil {
 			return err
 		}
 	}

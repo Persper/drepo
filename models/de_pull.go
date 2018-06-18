@@ -97,9 +97,9 @@ func PushPullInfo(user *User, pr *PullRequest) error {
 	return nil
 }
 
-func GetPullInfo(user *User, repo *Repository, pr *PullRequest) error {
+func GetPullInfo(user *User, repo *Repository, ipfsHash string) error {
 	// Step1: get the issue info hash
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+	//ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
 	// Step2: get the ipfs file and get the pull_request data
 	c := "ipfs cat " + ipfsHash
