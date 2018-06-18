@@ -160,9 +160,9 @@ func PushTeamInfo(org *User, team *Team) error {
 	return nil
 }
 
-func GetTeamInfo(org *User, team *Team) error {
+func GetTeamInfo(org *User, ipfsHash string) error {
 	// Step1: get the team info hash
-	ipfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
+	// ipfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
 
 	// Step2: get the ipfs file and get the team data
 	c := "ipfs cat " + ipfsHash

@@ -275,8 +275,8 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	// Just for test
 	contextOrg := &User{ID: 2}
-	team := new(Team)
-	if err := GetTeamInfo(contextOrg, team); err != nil {
+	testIpfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
+	if err := GetTeamInfo(contextOrg, testIpfsHash); err != nil {
 		return err
 	}
 
@@ -298,9 +298,10 @@ func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	return nil
 
 	// Step1: get the team
-	teams := make([]Team, 0)
-	for i := range teams {
-		if err := GetTeamInfo(contextOrg, &teams[i]); err != nil {
+	// TODO: from the blockchain
+	teamHashes := make([]string, 0)
+	for i := range teamHashes {
+		if err := GetTeamInfo(contextOrg, teamHashes[i]); err != nil {
 			return err
 		}
 	}
