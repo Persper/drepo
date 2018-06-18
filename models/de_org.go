@@ -285,8 +285,8 @@ func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 		return err
 	}
 
-	orgUser := new(OrgUser)
-	if err = GetOrgUserInfo(test_org, orgUser); err != nil {
+	testIpfsHash = "Qmd47hoMXYdodUY6nk3pisjS86H9AcSzd1YW3SRKKnFs5j"
+	if err = GetOrgUserInfo(test_org, testIpfsHash); err != nil {
 		return err
 	}
 
@@ -313,9 +313,10 @@ func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	}
 
 	// Step3: get the org_user
-	orgUsers := make([]OrgUser, 0)
-	for i := range orgUsers {
-		if err := GetOrgUserInfo(org, &orgUsers[i]); err != nil {
+	// TODO: from the blockchain
+	orgUserHashes := make([]string, 0)
+	for i := range orgUserHashes {
+		if err := GetOrgUserInfo(org, orgUserHashes[i]); err != nil {
 			return err
 		}
 	}

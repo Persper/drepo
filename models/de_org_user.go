@@ -82,9 +82,9 @@ func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 	return nil
 }
 
-func GetOrgUserInfo(org *User, orgUser *OrgUser) error {
+func GetOrgUserInfo(org *User, ipfsHash string) error {
 	// Step1: get the issue info hash
-	ipfsHash := "Qmd47hoMXYdodUY6nk3pisjS86H9AcSzd1YW3SRKKnFs5j"
+	//ipfsHash := "Qmd47hoMXYdodUY6nk3pisjS86H9AcSzd1YW3SRKKnFs5j"
 
 	// Step2: get the ipfs file and get the org_user data
 	c := "ipfs cat " + ipfsHash
