@@ -229,9 +229,9 @@ func PushIssueInfo(user *User, issue *Issue) error {
 	return nil
 }
 
-func GetIssueInfo(user *User, repo *Repository, issue *Issue) error {
+func GetIssueInfo(user *User, repo *Repository, ipfsHash string) error {
 	// Step1: get the issue info hash
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
+	//ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
 	// Step2: get the ipfs file and get the issue data
 	c := "ipfs cat " + ipfsHash
