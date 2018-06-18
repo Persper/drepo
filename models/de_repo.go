@@ -604,7 +604,12 @@ func GetRepoInfo(user *User, ipfsHash string) (*Repository, error) {
 
 			repoPath := RepoPath(user.Name, newRepo.Name)
 			fmt.Println("repopath:" + repoPath)
-			if err := GetRepoContent(user, repoPath); err != nil {
+
+			// just for test
+			ipfsHash := "QmYkMofbGtqBozUrG5LjFpMpg8Fhxw7ffJa8WwxtAvooRe"
+			// QmS63hLK2uridjdJyKPNyk8enAqNH74YJDX1t6H4rjdY31
+
+			if err := GetRepoContent(user, repoPath, ipfsHash); err != nil {
 				return nil, err
 			}
 		}
@@ -642,10 +647,8 @@ func PushRepoContent(user *User, repoPath string) (err error) {
 }
 
 // Get the new ipfsHash from the blockchain and get the repo content from IPFS
-func GetRepoContent(modifier *User, repoPath string) (err error) {
+func GetRepoContent(modifier *User, repoPath string, ipfsHash string) (err error) {
 	// Step1: get the repo content hash
-	ipfsHash := "QmYkMofbGtqBozUrG5LjFpMpg8Fhxw7ffJa8WwxtAvooRe"
-	// QmS63hLK2uridjdJyKPNyk8enAqNH74YJDX1t6H4rjdY31
 
 	// Step2: get the ipfs file and get the user data
 	c := "ipfs get " + ipfsHash
