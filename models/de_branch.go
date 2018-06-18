@@ -71,9 +71,8 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 	return nil
 }
 
-func GetBranchInfo(user *User, repo *Repository, branch *ProtectBranch) error {
+func GetBranchInfo(user *User, repo *Repository, ipfsHash string) error {
 	// Step1: get the branch info hash
-	ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
 
 	// Step2: get the ipfs file and get the branch data
 	c := "ipfs cat " + ipfsHash

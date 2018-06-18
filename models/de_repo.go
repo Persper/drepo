@@ -761,9 +761,9 @@ func GetRepoAndRelatedTables(user *User, ipfsHash string) (err error) {
 	return nil
 
 	// TODO: from the blockchain
-	branches := make([]ProtectBranch, 0)
-	for i := range branches {
-		if err := GetBranchInfo(user, repo, &branches[i]); err != nil {
+	branchHashes := make([]string, 0)
+	for i := range branchHashes {
+		if err := GetBranchInfo(user, repo, branchHashes[i]); err != nil {
 			return err
 		}
 	}
