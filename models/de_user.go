@@ -360,6 +360,17 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 			if err != nil {
 				return fmt.Errorf("Can not add the follow to the server: %v\n", err)
 			}
+			// Calculate the following of the followed user
+			followingUser := &User{ID: deUser.FollowUserID[i].FollowID}
+			has, err = x.Get(followingUser)
+			if err != nil {
+				return fmt.Errorf("Can not search the followingUser: %v\n", err)
+			}
+			if has {
+				if _, err = x.Exec("UPDATE `user` SET num_following=num_following+1 WHERE id=?", followingUser.ID); err != nil {
+					return fmt.Errorf("update num_following: %v\n", err)
+				}
+			}
 		}
 	}
 	user.NumFollowers = len(deUser.FollowUserID)
@@ -372,19 +383,6 @@ func transferDeUserToUser(deUser *DeUser, user *User) error {
 		return fmt.Errorf("Can not get follow issues: %v\n", err)
 	}
 	user.NumFollowing = int(total)
-
-	for i := range deUser.FollowUserID {
-		followingUser := &User{ID: deUser.FollowUserID[i].FollowID}
-		has, err := x.Get(followingUser)
-		if err != nil {
-			return fmt.Errorf("Can not search the followingUser: %v\n", err)
-		}
-		if has {
-			if _, err = x.Exec("UPDATE `user` SET num_following=num_following+1 WHERE id=?", followingUser.ID); err != nil {
-				return fmt.Errorf("update num_following: %v\n", err)
-			}
-		}
-	}
 	// ***** END: NumFollowing *****
 
 	// ***** START: NumRepos *****
