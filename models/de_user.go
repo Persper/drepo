@@ -239,7 +239,7 @@ func transferUserToDeUser(user *User, deUser *DeUser) error {
 	return nil
 }
 
-// Prerequisite: all repos exist or repo.id[] exists
+/// Prerequisite: all repos exist or repo.id[] exists
 func transferDeUserToUser(deUser *DeUser, user *User) error {
 	user.ID = deUser.ID
 	user.Name = deUser.Name
@@ -421,9 +421,9 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 	// Step 3: Put the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", user_data)
 	cmd := exec.Command("sh", "-c", c)
-	out, err2 := cmd.Output()
-	if err2 != nil {
-		return fmt.Errorf("Ca not push user to IPFS: %v\n", err2)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Ca not push user to IPFS: %v\n", err)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
@@ -435,12 +435,9 @@ func PushUserInfo(user *User, pushMode int) (err error) {
 	return nil
 }
 
-// Get the new ipfsHash from the blockchain and get the user info from IPFS
+/// Get the new ipfsHash from the blockchain and get the user info from IPFS
 func GetUserInfo(uportID string, ipfsHash string) (user *User, err error) {
-	// Step1: get the user info hash via addrToUserInfo
-	// TODO:
-
-	// Step2: get the ipfs file and get the user data
+	// Step1: get the ipfs file and get the user data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	user_data, err := cmd.Output()
@@ -448,14 +445,14 @@ func GetUserInfo(uportID string, ipfsHash string) (user *User, err error) {
 		return nil, fmt.Errorf("Can not get user data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall user data
+	// Step2: unmarshall user data
 	newDeUser := new(DeUser)
 	err = json.Unmarshal(user_data, &newDeUser)
 	if err != nil {
 		return nil, fmt.Errorf("Can not decode user data: %v\n", err)
 	}
 
-	// Step4: write into the local database and mkdir the user path
+	// Step3: write into the local database and mkdir the user path
 	newUser := new(User)
 	transferDeUserToUser(newDeUser, newUser)
 	newUser.UportId = uportID
@@ -496,7 +493,7 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 		return fmt.Errorf("Can not get user data: %v\n", err)
 	}
 
-	// Step2: push user
+	// Step2: push user to the blockchain and the IPFS
 	// TODO: check update or create
 	if err := PushUserInfo(user, 1); err != nil {
 		return err
@@ -544,51 +541,55 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 		}
 	}
 
+	// Step4: push the owned org
+
 	return nil
 }
 
 /// The user button: get the user info and all related tables to IPFS
 func GetUserAndOwnedRepos(uportID string) (err error) {
 	// Just for test
-	var testUser *User
-	testIpfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
-	if testUser, err = GetUserInfo(uportID, testIpfsHash); err != nil {
-		return err
-	}
+	/*
+		var testUser *User
+		testIpfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
+		if testUser, err = GetUserInfo(uportID, testIpfsHash); err != nil {
+			return err
+		}
 
-	testIpfsHash = "Qmcodn79uJF7GE9vqQFhD9u4cRMFe5vAMHV7zieHvepBLp"
-	if err := GetRepoAndRelatedTables(testUser, testIpfsHash); err != nil {
-		return err
-	}
+		testIpfsHash = "Qmcodn79uJF7GE9vqQFhD9u4cRMFe5vAMHV7zieHvepBLp"
+		if err := GetRepoAndRelatedTables(testUser, testIpfsHash); err != nil {
+			return err
+		}
 
-	testIpfsHash = "QmXWQDNWkN4j72vM2iriPPxEt6Kz1b6fn42x2rTWFhiZBy"
-	if err := GetOrgAndRelatedTables(testUser, testIpfsHash); err != nil {
-		return err
-	}
-	return nil
+		testIpfsHash = "QmXWQDNWkN4j72vM2iriPPxEt6Kz1b6fn42x2rTWFhiZBy"
+		if err := GetOrgAndRelatedTables(testUser, testIpfsHash); err != nil {
+			return err
+		}
+		return nil
+	*/
 
 	// Step1: get the user table
-	// TODO: from the blockchain
-	userHash := ""
+	// TODO: get userIpfsHash from the blockchain
+	userIpfsHash := ""
 	var user *User
-	if user, err = GetUserInfo(uportID, userHash); err != nil {
+	if user, err = GetUserInfo(uportID, userIpfsHash); err != nil {
 		return err
 	}
 
 	// Step2: get the owned repo
-	// TODO: from the blockchain
-	repoHashes := make([]string, 0)
-	for i := range repoHashes {
-		if err := GetRepoAndRelatedTables(user, repoHashes[i]); err != nil {
+	// TODO: get repoIpfsHashes from the blockchain
+	repoIpfsHashes := make([]string, 0)
+	for i := range repoIpfsHashes {
+		if err := GetRepoAndRelatedTables(user, repoIpfsHashes[i]); err != nil {
 			return err
 		}
 	}
 
 	// Step3: get the owned org
-	// TODO: from the blockchain
-	orgHashes := make([]string, 0)
-	for i := range orgHashes {
-		if err := GetOrgAndRelatedTables(user, orgHashes[i]); err != nil {
+	// TODO: get orgIpfsHashes from the blockchain
+	orgIpfsHashes := make([]string, 0)
+	for i := range orgIpfsHashes {
+		if err := GetOrgAndRelatedTables(user, orgIpfsHashes[i]); err != nil {
 			return err
 		}
 	}
