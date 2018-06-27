@@ -504,40 +504,9 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	if err = x.Find(&repos, &Repository{OwnerID: user.ID}); err != nil {
 		return fmt.Errorf("Can not get owned repos of the user: %v\n", err)
 	}
-
 	for i := range repos {
-		if err = PushRepoInfo(user, &repos[i]); err != nil {
+		if err = PushRepoAndRelatedTables(user, &repos[i]); err != nil {
 			return err
-		}
-
-		issues := make([]Issue, 0)
-		if err = x.Find(&issues, &Issue{RepoID: repos[i].ID}); err != nil {
-			return fmt.Errorf("Can not get issues of the repo: %v\n", err)
-		}
-		for j := range issues {
-			if err = PushIssueInfo(user, &issues[j]); err != nil {
-				return err
-			}
-
-			prs := make([]PullRequest, 0)
-			if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
-				return fmt.Errorf("Can not get pull_request of the repo: %v\n", err)
-			}
-			for k := range prs {
-				if err = PushPullInfo(user, &prs[k]); err != nil {
-					return err
-				}
-			}
-		}
-
-		branches := make([]ProtectBranch, 0)
-		if err = x.Find(&branches, &ProtectBranch{RepoID: repos[i].ID}); err != nil {
-			return fmt.Errorf("Can not get branches of the repo: %v\n", err)
-		}
-		for j := range branches {
-			if err = PushBranchInfo(user, &branches[j]); err != nil {
-				return err
-			}
 		}
 	}
 
