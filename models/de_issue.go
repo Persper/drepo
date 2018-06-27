@@ -217,7 +217,7 @@ func PushIssueInfo(user *User, issue *Issue) error {
 	cmd := exec.Command("sh", "-c", c)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Push issue to IPFS: fails: %v\n", err)
+		return fmt.Errorf("Push issue to IPFS: %v\n", err)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 

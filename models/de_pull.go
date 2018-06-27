@@ -77,56 +77,53 @@ func PushPullInfo(user *User, pr *PullRequest) error {
 	transferPullToDePull(pr, dePr)
 	pr_data, err := json.Marshal(dePr)
 	if err != nil {
-		return fmt.Errorf("Can not encode pull_request data: %v\n", err)
+		return fmt.Errorf("Can not encode pullRequest data: %v\n", err)
 	}
 
 	// Step2: Put the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", pr_data)
 	cmd := exec.Command("sh", "-c", c)
-	out, err2 := cmd.Output()
-	if err2 != nil {
-		return fmt.Errorf("Push pull_request to IPFS: fails: %v\n", err2)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Push pullRequest to IPFS: %v\n", err)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
 	// Step3: Modify the ipfsHash in the smart contract
 	// TODO: setPullInfo(ipfsHash)
 	ipfsHash = ipfsHash
-	fmt.Println("Push the pull_request file to the IPFS: " + ipfsHash)
+	fmt.Println("Push the pullRequest file to the IPFS: " + ipfsHash)
 
 	return nil
 }
 
 func GetPullInfo(user *User, repo *Repository, ipfsHash string) error {
-	// Step1: get the issue info hash
-	//ipfsHash := "QmZULkCELmmk5XNfCgTnCyFgAVxBRBXyDHGGMVoLFLiXEN"
-
-	// Step2: get the ipfs file and get the pull_request data
+	// Step1: get the ipfs file and get the pull_request data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	pr_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get pull_request data from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get pullRequest data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall pull_request data
+	// Step2: unmarshall pull_request data
 	newDePr := new(DePullRequest)
 	err = json.Unmarshal(pr_data, &newDePr)
 	if err != nil {
-		return fmt.Errorf("Can not decode data: %v", err)
+		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step4: write into the local database
+	// Step3: write into the local database
 	newPr := new(PullRequest)
 	transferDePullToPull(repo, newDePr, newPr)
-	has, err2 := x.Get(newPr)
-	if err2 != nil {
-		return fmt.Errorf("Can not search the pull request: %v\n", err2)
+	has, err := x.Get(newPr)
+	if err != nil {
+		return fmt.Errorf("Can not search the pullRequest: %v\n", err)
 	}
 	if !has {
 		_, err = x.Insert(newPr)
 		if err != nil {
-			return fmt.Errorf("Can not add the pull request to the server: %v\n", err)
+			return fmt.Errorf("Can not add the pullRequest to the server: %v\n", err)
 		}
 	}
 
