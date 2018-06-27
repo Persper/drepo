@@ -233,7 +233,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Access[] *****
 	accesses := make([]Access, 0)
 	if err := x.Find(&accesses, &Access{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get accesses of the user: %v\n", err)
+		return fmt.Errorf("Can not get accesses of the repo: %v\n", err)
 	}
 	for i := range accesses {
 		deAccess := new(DeAccess)
@@ -245,7 +245,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Collaboration[] *****
 	collaborations := make([]Collaboration, 0)
 	if err := x.Find(&collaborations, &Collaboration{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get collaborations of the user: %v\n", err)
+		return fmt.Errorf("Can not get collaborations of the repo: %v\n", err)
 	}
 	for i := range collaborations {
 		deCollaboration := new(DeCollaboration)
@@ -257,7 +257,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Release[] *****
 	releases := make([]Release, 0)
 	if err := x.Find(&releases, &Release{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get releases of the user: %v\n", err)
+		return fmt.Errorf("Can not get releases of the repo: %v\n", err)
 	}
 	for i := range releases {
 		deRelease := new(DeRelease)
@@ -269,7 +269,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	// ***** START: Milestone[] *****
 	milestones := make([]Milestone, 0)
 	if err := x.Find(&milestones, &Milestone{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get milestones of the user: %v\n", err)
+		return fmt.Errorf("Can not get milestones of the repo: %v\n", err)
 	}
 	for i := range milestones {
 		deMilestone := new(DeMilestone)
