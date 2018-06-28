@@ -511,6 +511,23 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	}
 
 	// Step4: push the owned org
+	orgUsers := make([]OrgUser, 0)
+	if err = x.Find(&orgUsers, &OrgUser{Uid: user.ID}); err != nil {
+		return fmt.Errorf("Can not get orgUsers of the user: %v\n", err)
+	}
+	for i := range orgUsers {
+		var org *User
+		org = &User{ID: orgUsers[i].OrgID}
+		hasOrg, err := x.Get(org)
+		if err != nil {
+			return fmt.Errorf("Can not get org data: %v\n", err)
+		}
+		if hasOrg {
+			if err = PushOrgAndRelatedTables(user, org); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
