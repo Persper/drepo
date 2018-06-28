@@ -587,29 +587,25 @@ func GetRepoInfo(user *User, ipfsHash string) (*Repository, error) {
 			return nil, err
 		}
 
-		has, err = x.Get(newRepo)
-		if err != nil {
-			return nil, fmt.Errorf("Can not get the repo: %v\n", err2)
+		if _, err = sess.Insert(newRepo); err != nil {
+			return nil, fmt.Errorf("Can not insert the repo: %v\n", err)
 		}
-		if !has {
-			if _, err = sess.Insert(newRepo); err != nil {
-				return nil, fmt.Errorf("Can not insert the repo: %v\n", err)
-			}
-			user.NumRepos++
-			if _, err = sess.Update(user); err != nil {
-				return nil, fmt.Errorf("Can not update the user: %v\n", err)
-			}
+		user.NumRepos++
+		if _, err = sess.Update(user); err != nil {
+			return nil, fmt.Errorf("Can not update the user: %v\n", err)
+		}
 
-			repoPath := RepoPath(user.Name, newRepo.Name)
-			fmt.Println("repopath:" + repoPath)
+		repoPath := RepoPath(user.Name, newRepo.Name)
+		fmt.Println("create repopath:" + repoPath)
 
-			// just for test
-			ipfsHash := "QmYkMofbGtqBozUrG5LjFpMpg8Fhxw7ffJa8WwxtAvooRe"
-			// QmS63hLK2uridjdJyKPNyk8enAqNH74YJDX1t6H4rjdY31
+		// just for test
+		// ipfsHash := "QmYkMofbGtqBozUrG5LjFpMpg8Fhxw7ffJa8WwxtAvooRe"
+		// QmS63hLK2uridjdJyKPNyk8enAqNH74YJDX1t6H4rjdY31
 
-			if err := GetRepoContent(user, repoPath, ipfsHash); err != nil {
-				return nil, err
-			}
+		// Get the repoContent hash from the blockchain
+		ipfsHash = ""
+		if err := GetRepoContent(user, repoPath, ipfsHash); err != nil {
+			return nil, err
 		}
 
 		return newRepo, sess.Commit()
@@ -626,17 +622,17 @@ func PushRepoContent(user *User, repoPath string) (err error) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step1: Push the repo to IPFS
+	// Step1: push the repo to IPFS
 	c := "ipfs add -r  " + repoPath
 	cmd := exec.Command("sh", "-c", c)
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Push repoContent to IPFS: fails: %v\n", err)
+		return fmt.Errorf("Push repoContent to IPFS: %v\n", err)
 	}
 	ipfsHashs := strings.Split(string(out), " ")
 	ipfsHash := ipfsHashs[len(ipfsHashs)-2]
 
-	// Step2: Modify the RepoContentIpfsHash in the smart contract
+	// Step2: modify the RepoContentIpfsHash in the smart contract
 	// TODO: setRepoContentIpfsHash(ipfsHash)
 	ipfsHash = ipfsHash
 	fmt.Println("Push the repo content to the IPFS: " + ipfsHash)
@@ -646,22 +642,20 @@ func PushRepoContent(user *User, repoPath string) (err error) {
 
 // Get the new ipfsHash from the blockchain and get the repo content from IPFS
 func GetRepoContent(modifier *User, repoPath string, ipfsHash string) (err error) {
-	// Step1: get the repo content hash
-
-	// Step2: get the ipfs file and get the user data
+	// Step1: get the ipfs file and get the user data
 	c := "ipfs get " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	_, err = cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get repo content from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get repo content from IPFS: %v\n", err)
 	}
 
-	// Step3: move the .git dir to the repoPath
+	// Step2: move the .git dir to the repoPath
 	c = "mv " + ipfsHash + " " + repoPath
 	cmd = exec.Command("sh", "-c", c)
 	_, err = cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Move repo content to the targeted dir: fails: %v\n", err)
+		return fmt.Errorf("Move repo content to the targeted dir: %v\n", err)
 	}
 
 	return nil
@@ -674,19 +668,20 @@ func PushRepoContentByDegit(modifier *User, repoPath string) (err error) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step1: Push the repo to IPFS
+	// Step1: push the repo to IPFS
 	ipfsHash, err := ipfs.Push_Repo_To_IPFS(repoPath)
 	if err != nil {
 		return err
 	}
 
-	// Step2: Modify the RepoContentIpfsHash in the smart contract
+	// Step2: modify the RepoContentIpfsHash in the smart contract
 	// TODO: setRepoContentIpfsHash(ipfsHash)
 	ipfsHash = ipfsHash
 
 	return nil
 }
 
+/// TODO: Get the whole .git dir rather than only a branch
 /// Get the new ipfsHash from the blockchain and get the repo content from IPFS
 func GetRepoContentByDegit(modifier *User) (err error) {
 	// Step1: getRepoContentIpfsHash() from the smart contract
