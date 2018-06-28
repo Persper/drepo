@@ -104,6 +104,7 @@ func transferDeOrgToOrg(deOrg *DeOrg, org *User) error {
 
 	// ***** START: NumRepos *****
 	// Note: the numRepos is only used for the user rather than the organization ?
+	// TODO: to double check.
 	org.NumRepos = 0
 	// ***** END: NumRepos *****
 
@@ -115,24 +116,24 @@ func PushOrgInfo(user *User, org *User) error {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step 1: Encode org data into JSON format
+	// Step1: encode org data into JSON format
 	deOrg := new(DeOrg)
 	transferOrgToDeOrg(org, deOrg)
 	org_data, err := json.Marshal(deOrg)
 	if err != nil {
-		return fmt.Errorf("Can not encode org data: %v", err)
+		return fmt.Errorf("Can not encode org data: %v\n", err)
 	}
 
-	// Step 2: Put the encoded data into IPFS
+	// Step2: push the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", org_data)
 	cmd := exec.Command("sh", "-c", c)
-	out, err2 := cmd.Output()
-	if err2 != nil {
-		return fmt.Errorf("Push org to IPFS: fails: %v", err2)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Push org to IPFS: %v\n", err)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
-	// Step4: Modify the ipfsHash in the smart contract
+	// Step3: modify the ipfsHash in the smart contract
 	// TODO: setOrgInfo(ipfsHash)
 	ipfsHash = ipfsHash
 	fmt.Println("Push the org info to the IPFS: " + ipfsHash)
@@ -141,10 +142,7 @@ func PushOrgInfo(user *User, org *User) error {
 }
 
 func GetOrgInfo(user *User, ipfsHash string) (*User, error) {
-	// Step1: get the user info hash via addrToUserInfo
-	//
-
-	// Step2: get the ipfs file and get the org data
+	// Step1: get the ipfs file and get the org data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	org_data, err := cmd.Output()
@@ -152,14 +150,14 @@ func GetOrgInfo(user *User, ipfsHash string) (*User, error) {
 		return nil, fmt.Errorf("Can not get org data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall org data
+	// Step2: unmarshall org data
 	newDeOrg := new(DeOrg)
 	err = json.Unmarshal(org_data, &newDeOrg)
 	if err != nil {
 		return nil, fmt.Errorf("Can not decode org data: %v\n", err)
 	}
 
-	// Step4: write into the local database and mkdir the org path
+	// Step3: write into the local database and mkdir the org path
 	newOrg := new(User)
 	transferDeOrgToOrg(newDeOrg, newOrg)
 	has, err := x.Get(newOrg)
@@ -231,40 +229,9 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 	if err = x.Find(&repos, &Repository{OwnerID: org.ID}); err != nil {
 		return fmt.Errorf("Can not get owned repos of the org: %v\n", err)
 	}
-
 	for i := range repos {
-		if err = PushRepoInfo(org, &repos[i]); err != nil {
+		if err = PushRepoAndRelatedTables(org, &repos[i]); err != nil {
 			return err
-		}
-
-		issues := make([]Issue, 0)
-		if err = x.Find(&issues, &Issue{RepoID: repos[i].ID}); err != nil {
-			return fmt.Errorf("Can not get issues of the repo: %v\n", err)
-		}
-		for j := range issues {
-			if err = PushIssueInfo(org, &issues[j]); err != nil {
-				return err
-			}
-
-			prs := make([]PullRequest, 0)
-			if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
-				return fmt.Errorf("Can not get pull_request of the repo: %v\n", err)
-			}
-			for k := range prs {
-				if err = PushPullInfo(org, &prs[k]); err != nil {
-					return err
-				}
-			}
-		}
-
-		branches := make([]ProtectBranch, 0)
-		if err = x.Find(&branches, &ProtectBranch{RepoID: repos[i].ID}); err != nil {
-			return fmt.Errorf("Can not get branches of the repo: %v\n", err)
-		}
-		for j := range branches {
-			if err = PushBranchInfo(org, &branches[j]); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -274,7 +241,7 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 /// The org button: get the org info and all related tables to IPFS
 func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	// Just for test
-	contextOrg := &User{ID: 2}
+	/* contextOrg := &User{ID: 2}
 	testIpfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
 	if err := GetTeamInfo(contextOrg, testIpfsHash); err != nil {
 		return err
@@ -295,21 +262,27 @@ func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	if _, err = GetRepoInfo(test_org, ipfsHash); err != nil {
 		return err
 	}
-	return nil
+	return nil */
 
-	// Step1: get the team
+	// TODO：org needs orgID
+	var org *User
+
+	// Step1: get the owned repo
 	// TODO: from the blockchain
-	teamHashes := make([]string, 0)
-	for i := range teamHashes {
-		if err := GetTeamInfo(contextOrg, teamHashes[i]); err != nil {
+	repoHashes := make([]string, 0)
+	for i := range repoHashes {
+		if err := GetRepoAndRelatedTables(org, repoHashes[i]); err != nil {
 			return err
 		}
 	}
 
-	// Step2: get the org
-	var org *User
-	if org, err = GetOrgInfo(user, ipfsHash); err != nil {
-		return err
+	// Step2: get the team
+	// TODO: from the blockchain
+	teamHashes := make([]string, 0)
+	for i := range teamHashes {
+		if err := GetTeamInfo(org, teamHashes[i]); err != nil {
+			return err
+		}
 	}
 
 	// Step3: get the org_user
@@ -321,13 +294,9 @@ func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 		}
 	}
 
-	// Step1: get the owned repo
-	// TODO: from the blockchain
-	repoHashes := make([]string, 0)
-	for i := range repoHashes {
-		if err := GetRepoAndRelatedTables(org, repoHashes[i]); err != nil {
-			return err
-		}
+	// Step4: get the org
+	if org, err = GetOrgInfo(user, ipfsHash); err != nil {
+		return err
 	}
 
 	return nil
