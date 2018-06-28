@@ -46,7 +46,7 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step1: Encode branch data into JSON format
+	// Step1: encode branch data into JSON format
 	deBranch := new(DeBranch)
 	transferBranchToDeBranch(branch, deBranch)
 	branch_data, err := json.Marshal(deBranch)
@@ -54,16 +54,16 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 		return fmt.Errorf("Can not encode branch data: %v\n", err)
 	}
 
-	// Step2: Put the encoded data into IPFS
+	// Step2: push the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", branch_data)
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
 	if err2 != nil {
-		return fmt.Errorf("Push branch to IPFS: fails: %v\n", err2)
+		return fmt.Errorf("Push branch to IPFS: %v\n", err2)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
-	// Step3: Modify the ipfsHash in the smart contract
+	// Step3: modify the ipfsHash in the smart contract
 	// TODO: setBranchInfo(ipfsHash)
 	ipfsHash = ipfsHash
 	fmt.Println("Push the protect_branch file to the IPFS: " + ipfsHash)
@@ -72,29 +72,27 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 }
 
 func GetBranchInfo(user *User, repo *Repository, ipfsHash string) error {
-	// Step1: get the branch info hash
-
-	// Step2: get the ipfs file and get the branch data
+	// Step1: get the ipfs file and get the branch data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	branch_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get branch data from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get branch data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall pull data
+	// Step2: unmarshall pull data
 	newDeBranch := new(DeBranch)
 	err = json.Unmarshal(branch_data, &newDeBranch)
 	if err != nil {
 		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step4: write into the local database and mkdir the local path
+	// Step3: write into the local database and mkdir the local path
 	newBranch := new(ProtectBranch)
 	transferDeBranchToBranch(repo, newDeBranch, newBranch)
-	has, err2 := x.Get(newBranch)
-	if err2 != nil {
-		return fmt.Errorf("Can not search the branch: %v\n", err2)
+	has, err := x.Get(newBranch)
+	if err != nil {
+		return fmt.Errorf("Can not search the branch: %v\n", err)
 	}
 	if !has {
 		_, err = x.Insert(newBranch)

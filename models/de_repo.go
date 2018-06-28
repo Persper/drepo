@@ -705,42 +705,41 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 	user = &User{ID: contextUser.ID}
 	_, err = x.Get(user)
 	if err != nil {
-		return fmt.Errorf("Can not get user data: %v", err)
+		return fmt.Errorf("Can not get user data: %v\n", err)
 	}
 
 	// Step2: push the repo
 	if err = PushRepoInfo(user, repo); err != nil {
-		return fmt.Errorf("Can not push repo data: %v", err)
+		return fmt.Errorf("Can not push repo data: %v\n", err)
 	}
 
 	issues := make([]Issue, 0)
 	if err = x.Find(&issues, &Issue{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get issues of the repo: %v", err)
+		return fmt.Errorf("Can not get issues of the repo: %v\n", err)
 	}
 	for j := range issues {
 		if err = PushIssueInfo(user, &issues[j]); err != nil {
-			return fmt.Errorf("Can not push issue data: %v", err)
+			return fmt.Errorf("Can not push issue data: %v\n", err)
 		}
 
 		prs := make([]PullRequest, 0)
 		if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
-			return fmt.Errorf("Can not get pull_request of the repo: %v", err)
+			return fmt.Errorf("Can not get pullRequest of the repo: %v\n", err)
 		}
-
 		for k := range prs {
 			if err = PushPullInfo(user, &prs[k]); err != nil {
-				return fmt.Errorf("Can not push pull_request data: %v", err)
+				return fmt.Errorf("Can not push pullRequest data: %v\n", err)
 			}
 		}
 	}
 
 	branches := make([]ProtectBranch, 0)
 	if err = x.Find(&branches, &ProtectBranch{RepoID: repo.ID}); err != nil {
-		return fmt.Errorf("Can not get branches of the repo: %v", err)
+		return fmt.Errorf("Can not get branches of the repo: %v\n", err)
 	}
 	for j := range branches {
 		if err = PushBranchInfo(user, &branches[j]); err != nil {
-			return fmt.Errorf("Can not push branch data: %v", err)
+			return fmt.Errorf("Can not push branch data: %v\n", err)
 		}
 	}
 
@@ -750,11 +749,14 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 /// The repo button: get the repo info and all related tables to IPFS
 func GetRepoAndRelatedTables(user *User, ipfsHash string) (err error) {
 	// Just for test
-	var repo *Repository
+	/*var repo *Repository
 	if repo, err = GetRepoInfo(user, ipfsHash); err != nil {
 		return err
 	}
-	return nil
+	return nil*/
+
+	// TODO：repo needs repoID
+	var repo *Repository
 
 	// TODO: from the blockchain
 	branchHashes := make([]string, 0)
