@@ -57,7 +57,7 @@ func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step 1: Encode orgUser data into JSON format
+	// Step 1: encode orgUser data into JSON format
 	deOrgUser := new(DeOrgUser)
 	transferOrgUserToDeOrgUser(orgUser, deOrgUser)
 	orgUser_data, err := json.Marshal(deOrgUser)
@@ -65,7 +65,7 @@ func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 		return fmt.Errorf("Can not encode orgUser data: %v\n", err)
 	}
 
-	// Step 2: Put the encoded data into IPFS
+	// Step 2: push the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", orgUser_data)
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
@@ -74,7 +74,7 @@ func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
-	// Step4: Modify the ipfsHash in the smart contract
+	// Step3: modify the ipfsHash in the smart contract
 	// TODO: setOrgUserInfo(ipfsHash)
 	ipfsHash = ipfsHash
 	fmt.Println("Push the orgUser to the IPFS: " + ipfsHash)
@@ -83,35 +83,32 @@ func PushOrgUserInfo(user *User, org *User, orgUser *OrgUser) error {
 }
 
 func GetOrgUserInfo(org *User, ipfsHash string) error {
-	// Step1: get the issue info hash
-	//ipfsHash := "Qmd47hoMXYdodUY6nk3pisjS86H9AcSzd1YW3SRKKnFs5j"
-
-	// Step2: get the ipfs file and get the org_user data
+	// Step1: get the ipfs file and get the orgUser data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	orgUser_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get org_user data from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get orgUser data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall org_user data
+	// Step2: unmarshall orgUser data
 	newDeOU := new(DeOrgUser)
 	err = json.Unmarshal(orgUser_data, &newDeOU)
 	if err != nil {
 		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step4: write into the local database
+	// Step3: write into the local database
 	newOU := new(OrgUser)
 	transferDeOrgUserToOrgUser(org, newDeOU, newOU)
-	has, err2 := x.Get(newOU)
-	if err2 != nil {
-		return fmt.Errorf("Can not search the org_user: %v\n", err2)
+	has, err := x.Get(newOU)
+	if err != nil {
+		return fmt.Errorf("Can not search the orgUser: %v\n", err)
 	}
 	if !has {
 		_, err = x.Insert(newOU)
 		if err != nil {
-			return fmt.Errorf("Can not add the org_user to the server: %v\n", err)
+			return fmt.Errorf("Can not add the orgUser to the server: %v\n", err)
 		}
 	}
 
