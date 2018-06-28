@@ -135,24 +135,24 @@ func PushTeamInfo(org *User, team *Team) error {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}*/
 
-	// Step 1: Encode team data into JSON format
+	// Step1: encode team data into JSON format
 	deTeam := new(DeTeam)
 	transferTeamToDeTeam(team, deTeam)
 	team_data, err := json.Marshal(deTeam)
 	if err != nil {
-		return fmt.Errorf("Can not encode team data: %v", err)
+		return fmt.Errorf("Can not encode team data: %v\n", err)
 	}
 
-	// Step 2: Put the encoded data into IPFS
+	// Step2: push the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", team_data)
 	cmd := exec.Command("sh", "-c", c)
 	out, err2 := cmd.Output()
 	if err2 != nil {
-		return fmt.Errorf("Push org to IPFS: fails: %v", err2)
+		return fmt.Errorf("Push org to IPFS: %v\n", err2)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
-	// Step4: Modify the ipfsHash in the smart contract
+	// Step3: modify the ipfsHash in the smart contract
 	// TODO: setTeamInfo(ipfsHash)
 	ipfsHash = ipfsHash
 	fmt.Println("Push the team to the IPFS: " + ipfsHash)
@@ -161,25 +161,22 @@ func PushTeamInfo(org *User, team *Team) error {
 }
 
 func GetTeamInfo(org *User, ipfsHash string) error {
-	// Step1: get the team info hash
-	// ipfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
-
-	// Step2: get the ipfs file and get the team data
+	// Step1: get the ipfs file and get the team data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	team_data, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("Get team data from IPFS: fails: %v\n", err)
+		return fmt.Errorf("Get team data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall team data
+	// Step2: unmarshall team data
 	newDeTeam := new(DeTeam)
 	err = json.Unmarshal(team_data, &newDeTeam)
 	if err != nil {
 		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step4: write into the local database
+	// Step3: write into the local database
 	newTeam := new(Team)
 	transferDeTeamToTeam(org, newDeTeam, newTeam)
 	has, err2 := x.Get(newTeam)
