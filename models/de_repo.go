@@ -281,7 +281,7 @@ func transferRepoToDeRepo(repo *Repository, deRepo *DeRepo) error {
 	return nil
 }
 
-/// Prerequisite: issue / watch / star / milistone/ pulls /
+/// Prerequisite: issue / watch / star / pulls /
 func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	repo.ID = deRepo.ID
 	repo.OwnerID = deRepo.OwnerID
@@ -385,7 +385,7 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 		// Update: milestoneID -> issue - > issueUser
 		issues := make([]Issue, 0)
 		if err := x.Find(&issues, &Issue{MilestoneID: deRepo.Milestones[i].ID}); err != nil {
-			return fmt.Errorf("Can not get issues of the user: %v\n", err)
+			return fmt.Errorf("Can not get issues of the milestone: %v\n", err)
 		}
 		for j := range issues {
 			issueUsers := make([]IssueUser, 0)
@@ -473,7 +473,7 @@ func transferDeRepoToRepo(deRepo *DeRepo, repo *Repository) error {
 	if err != nil {
 		return fmt.Errorf("Can not get repo closedPullRequests: %v\n", err)
 	}
-	repo.NumPulls = int(total)
+	repo.NumClosedPulls = int(total)
 	// ***** END: NumClosedPulls *****
 
 	// ***** START: NumForks *****
@@ -507,22 +507,22 @@ func PushRepoInfo(user *User, repo *Repository) (err error) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
 
-	// Step0: push the repo content to the IPFS
+	// Step1: push the repo content to the IPFS
 	err = PushRepoContent(user, repo.RepoPath())
 	if err != nil {
 		return err
 	}
 
-	// step1: push the repo table to the IPFS
+	// step2: push the repo table to the IPFS
 	var access *Access
 	access = &Access{UserID: user.ID, RepoID: repo.ID}
 	_, err = x.Get(access)
 	if err != nil {
-		return fmt.Errorf("Can not get user access: %v\n", err)
+		return fmt.Errorf("Can not get user-repo access: %v\n", err)
 	}
 
 	if repo.OwnerID == user.ID || access.Mode == ACCESS_MODE_OWNER {
-		// Step 1: Encode repo data into JSON format
+		// Encode repo data into JSON format
 		deRepo := new(DeRepo)
 		transferRepoToDeRepo(repo, deRepo)
 		repo_data, err := json.Marshal(deRepo)
@@ -530,16 +530,16 @@ func PushRepoInfo(user *User, repo *Repository) (err error) {
 			return fmt.Errorf("Can not encode repo data: %v\n", err)
 		}
 
-		// Step 2: Put the encoded data into IPFS
+		// Push the encoded data into IPFS
 		c := fmt.Sprintf("echo '%s' | ipfs add ", repo_data)
 		cmd := exec.Command("sh", "-c", c)
-		out, err2 := cmd.Output()
-		if err2 != nil {
-			return fmt.Errorf("Push Repo to IPFS: fails: %v\n", err2)
+		out, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("Push Repo to IPFS: fails: %v\n", err)
 		}
 		ipfsHash := strings.Split(string(out), " ")[1]
 
-		// Step3: Modify the ipfsHash in the smart contract
+		// Modify the ipfsHash in the smart contract
 		// TODO: setRepoInfo(ipfsHash)
 		ipfsHash = ipfsHash
 		fmt.Println("Push the repo file to the IPFS: " + ipfsHash)
@@ -557,29 +557,27 @@ func PushRepoInfo(user *User, repo *Repository) (err error) {
 
 // Get the new ipfsHash from the blockchain and get the repo info from IPFS
 func GetRepoInfo(user *User, ipfsHash string) (*Repository, error) {
-	// Step1: get the repo info hash
-
-	// Step2: get the ipfs file and get the user data
+	// Step1: get the ipfs file and get the user data
 	c := "ipfs cat " + ipfsHash
 	cmd := exec.Command("sh", "-c", c)
 	repo_data, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("Get Repo data from IPFS: fails: %v\n", err)
+		return nil, fmt.Errorf("Get Repo data from IPFS: %v\n", err)
 	}
 
-	// Step3: unmarshall user data
+	// Step2: unmarshall user data
 	newDeRepo := new(DeRepo)
 	err = json.Unmarshal(repo_data, &newDeRepo)
 	if err != nil {
 		return nil, fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step4: write into the local database and mkdir the local path
+	// Step3: write into the local database and mkdir the local path
 	newRepo := new(Repository)
 	transferDeRepoToRepo(newDeRepo, newRepo)
-	has, err2 := x.Get(newRepo)
-	if err2 != nil {
-		return nil, fmt.Errorf("Can not search the repo: %v\n", err2)
+	has, err := x.Get(newRepo)
+	if err != nil {
+		return nil, fmt.Errorf("Can not search the repo: %v\n", err)
 	}
 
 	if !has {
