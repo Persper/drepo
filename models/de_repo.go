@@ -713,17 +713,27 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 		return fmt.Errorf("Can not push repo data: %v\n", err)
 	}
 
+	labels := make([]Label, 0)
+	if err = x.Find(&labels, &Label{RepoID: repo.ID}); err != nil {
+		return fmt.Errorf("Can not get labels of the repo: %v\n", err)
+	}
+	for i := range labels {
+		if err = PushLabelInfo(user, &labels[i]); err != nil {
+			return fmt.Errorf("Can not push label data: %v\n", err)
+		}
+	}
+
 	issues := make([]Issue, 0)
 	if err = x.Find(&issues, &Issue{RepoID: repo.ID}); err != nil {
 		return fmt.Errorf("Can not get issues of the repo: %v\n", err)
 	}
-	for j := range issues {
-		if err = PushIssueInfo(user, &issues[j]); err != nil {
+	for i := range issues {
+		if err = PushIssueInfo(user, &issues[i]); err != nil {
 			return fmt.Errorf("Can not push issue data: %v\n", err)
 		}
 
 		prs := make([]PullRequest, 0)
-		if err = x.Find(&prs, &PullRequest{IssueID: issues[j].ID}); err != nil {
+		if err = x.Find(&prs, &PullRequest{IssueID: issues[i].ID}); err != nil {
 			return fmt.Errorf("Can not get pullRequest of the repo: %v\n", err)
 		}
 		for k := range prs {
@@ -737,8 +747,8 @@ func PushRepoAndRelatedTables(contextUser *User, repo *Repository) (err error) {
 	if err = x.Find(&branches, &ProtectBranch{RepoID: repo.ID}); err != nil {
 		return fmt.Errorf("Can not get branches of the repo: %v\n", err)
 	}
-	for j := range branches {
-		if err = PushBranchInfo(user, &branches[j]); err != nil {
+	for i := range branches {
+		if err = PushBranchInfo(user, &branches[i]); err != nil {
 			return fmt.Errorf("Can not push branch data: %v\n", err)
 		}
 	}
@@ -776,6 +786,13 @@ func GetRepoAndRelatedTables(user *User, ipfsHash string) (err error) {
 	issueHashes := make([]string, 0)
 	for i := range issueHashes {
 		if err := GetIssueInfo(user, repo, issueHashes[i]); err != nil {
+			return err
+		}
+	}
+	// TODO: from the blockchain
+	labelHashes := make([]string, 0)
+	for i := range labelHashes {
+		if err := GetLabelInfo(user, repo, labelHashes[i]); err != nil {
 			return err
 		}
 	}

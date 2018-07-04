@@ -57,9 +57,9 @@ func PushBranchInfo(user *User, branch *ProtectBranch) error {
 	// Step2: push the encoded data into IPFS
 	c := fmt.Sprintf("echo '%s' | ipfs add ", branch_data)
 	cmd := exec.Command("sh", "-c", c)
-	out, err2 := cmd.Output()
-	if err2 != nil {
-		return fmt.Errorf("Push branch to IPFS: %v\n", err2)
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("Push branch to IPFS: %v\n", err)
 	}
 	ipfsHash := strings.Split(string(out), " ")[1]
 
@@ -87,7 +87,7 @@ func GetBranchInfo(user *User, repo *Repository, ipfsHash string) error {
 		return fmt.Errorf("Can not decode data: %v\n", err)
 	}
 
-	// Step3: write into the local database and mkdir the local path
+	// Step3: write into the local database
 	newBranch := new(ProtectBranch)
 	transferDeBranchToBranch(repo, newDeBranch, newBranch)
 	has, err := x.Get(newBranch)
