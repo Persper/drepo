@@ -47,6 +47,25 @@ func transferDeIssueUserToIssueUser(issue *Issue, repo *Repository,
 
 /// ***** END: DeIssueUser *****
 
+/// ***** START: DeIssueLabel *****
+type DeIssueLabel struct {
+	LabelID int64 `xorm:"UNIQUE(s)"`
+}
+
+func transferIssueLabelToDeIssueLabel(issueLabel *IssueLabel, deIssueLabel *DeIssueLabel) {
+	deIssueLabel.LabelID = issueLabel.LabelID
+}
+
+func transferDeIssueLabelToIssueLabel(issue *Issue, deIssueLabel *DeIssueLabel,
+	issueLabel *IssueLabel) {
+	// issueLabel.ID can be generated at any time
+	// TODO: issueLabel.ID
+	issueLabel.LabelID = deIssueLabel.LabelID
+	issueLabel.IssueID = issue.ID
+}
+
+/// ***** END: DeIssueLabel *****
+
 /// ***** START: DeComment *****
 type DeComment struct {
 	Type        CommentType
@@ -99,8 +118,9 @@ type DeIssue struct {
 	DeadlineUnix int64
 	CreatedUnix  int64
 	UpdatedUnix  int64
-	Comments     []DeComment   `xorm:"-"`
-	IssueUsers   []DeIssueUser `xorm:"-"`
+	Comments     []DeComment    `xorm:"-"`
+	IssueUsers   []DeIssueUser  `xorm:"-"`
+	IssueLabels  []DeIssueLabel `xorm:"-"`
 }
 
 func transferIssueToDeIssue(issue *Issue, deIssue *DeIssue) error {
@@ -140,6 +160,18 @@ func transferIssueToDeIssue(issue *Issue, deIssue *DeIssue) error {
 		deIssue.IssueUsers = append(deIssue.IssueUsers, *deIssueUser)
 	}
 	// ***** END: IssueUser[] *****
+
+	// ***** START: IssueLabel[] *****
+	issueLabels := make([]IssueLabel, 0)
+	if err := x.Find(&issueLabels, &IssueLabel{IssueID: issue.ID}); err != nil {
+		return fmt.Errorf("Can not get issueLabels of the Issue: %v\n", err)
+	}
+	for i := range issueLabels {
+		deIssueLabel := new(DeIssueLabel)
+		transferIssueLabelToDeIssueLabel(&issueLabels[i], deIssueLabel)
+		deIssue.IssueLabels = append(deIssue.IssueLabels, *deIssueLabel)
+	}
+	// ***** END: IssueLabel[] *****
 
 	return nil
 }
@@ -192,6 +224,23 @@ func transferDeIssueToIssue(repo *Repository, deIssue *DeIssue, issue *Issue) er
 			_, err = x.Insert(issueUser)
 			if err != nil {
 				return fmt.Errorf("Can not add the issueUser to the server: %v\n", err)
+			}
+		}
+	}
+	// ***** END: IssueUser[] *****
+
+	// ***** START: IssueUser[] *****
+	for i := range deIssue.IssueLabels {
+		issueLabel := new(IssueLabel)
+		transferDeIssueLabelToIssueLabel(issue, &deIssue.IssueLabels[i], issueLabel)
+		has, err := x.Get(issueLabel)
+		if err != nil {
+			return fmt.Errorf("Can not search the issueLabel: %v\n", err)
+		}
+		if !has {
+			_, err = x.Insert(issueLabel)
+			if err != nil {
+				return fmt.Errorf("Can not add the issueLabel to the server: %v\n", err)
 			}
 		}
 	}
