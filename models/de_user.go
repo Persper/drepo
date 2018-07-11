@@ -479,8 +479,53 @@ func GetUserInfo(uportID string, ipfsHash string) (user *User, err error) {
 	return newUser, nil
 }
 
-/// The user button: push the user info and all related tables to IPFS
-func PushUserAndOwnedRepos(contextUser *User) (err error) {
+/// The user button: push the user info to IPFS
+func PushUserButton(contextUser *User) (err error) {
+	if !canPushToBlockchain(contextUser) {
+		return fmt.Errorf("The user can not push to the blockchain")
+	}
+
+	// Step1: get the corresponding user.
+	var user *User
+	user = &User{ID: contextUser.ID}
+	_, err = x.Get(user)
+	if err != nil {
+		return fmt.Errorf("Can not get user data: %v\n", err)
+	}
+
+	// Step2: push user to the blockchain and the IPFS
+	// TODO: check update or create
+	if err := PushUserInfo(user, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/// The user button: get the user info from IPFS
+func GetUserButton(uportID string) (err error) {
+	// Just for test
+	/*
+		var testUser *User
+		testIpfsHash := "QmTMU8bqRX1YcQvbe7AwjUca3U2KAFsfn3i9YwfTp1gY3C"
+		if testUser, err = GetUserInfo(uportID, testIpfsHash); err != nil {
+			return err
+		}
+		return nil
+	*/
+
+	// Step1: get the user table
+	// TODO: get userIpfsHash from the blockchain
+	userIpfsHash := ""
+	if _, err = GetUserInfo(uportID, userIpfsHash); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/// Push the user info and all related tables to IPFS
+func PushUserAllInfos(contextUser *User) (err error) {
 	if !canPushToBlockchain(contextUser) {
 		return fmt.Errorf("The user can not push to the blockchain")
 	}
@@ -532,8 +577,8 @@ func PushUserAndOwnedRepos(contextUser *User) (err error) {
 	return nil
 }
 
-/// The user button: get the user info and all related tables to IPFS
-func GetUserAndOwnedRepos(uportID string) (err error) {
+/// Get the user info and all related tables from IPFS
+func GetUserAllInfos(uportID string) (err error) {
 	// Just for test
 	/*
 		var testUser *User
@@ -581,111 +626,3 @@ func GetUserAndOwnedRepos(uportID string) (err error) {
 	}
 	return nil
 }
-
-/// Uncompleted
-/// TODO: Push the user info and all related tables to IPFS
-/*func PushUserAllInfos(contextUser *User) (err error) {
-	if !canPushToBlockchain(contextUser) {
-		return fmt.Errorf("The user can not push to the blockchain")
-	}
-
-	// Step0: get the corresponding user.
-	var user *User
-	user = &User{ID: contextUser.ID}
-	_, err = x.Get(user)
-	if err != nil {
-		return fmt.Errorf("Can not get user data: %v", err)
-	}
-
-	// Step1: push user: check update or create
-	if err := PushUserInfo(user, 1); err != nil {
-		return err
-	}
-
-	// Step2: push the related orgs
-	orgUsers := make([]OrgUser, 0)
-	if err = x.Find(&orgUsers, &OrgUser{Uid: user.ID}); err != nil {
-		return fmt.Errorf("Can not get orgUsers of the user: %v", err)
-	}
-	for i := range orgUsers {
-		var org *User
-		org = &User{ID: orgUsers[i].ID}
-		hasOrg, err := x.Get(org)
-		if err != nil {
-			return fmt.Errorf("Can not get org data: %v", err)
-		}
-		if hasOrg {
-			if err = PushOrgInfo(user, org); err != nil {
-				return err
-			}
-			// TODO: only owner?
-			if err = PushOrgUserInfo(user, org, &orgUsers[i]); err != nil {
-				return err
-			}
-
-			teams := make([]Team, 0)
-			if err = x.Find(&teams, &Team{OrgID: org.ID}); err != nil {
-				return fmt.Errorf("Can not get teams of the user: %v", err)
-			}
-			for j := range teams {
-				if err = PushTeamInfo(user, &teams[j]); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Step3: push the related repo
-	accesses := make([]Access, 0)
-	if err = x.Find(&accesses, &Access{UserID: user.ID}); err != nil {
-		return fmt.Errorf("Can not get accesses of the user: %v", err)
-	}
-	for i := range accesses {
-		var repo *Repository
-		repo = &Repository{ID: accesses[i].RepoID}
-		hasRepo, err := x.Get(repo)
-		if err != nil {
-			return fmt.Errorf("Can not get repo data: %v", err)
-		}
-		if hasRepo {
-			if err = PushRepoInfo(user, repo); err != nil {
-				return err
-			}
-		}
-
-		issues := make([]Issue, 0)
-		if err = x.Find(&issues, &Issue{RepoID: accesses[i].RepoID}); err != nil {
-			return fmt.Errorf("Can not get issues of the repo: %v", err)
-		}
-
-		for j := range issues {
-			if err = PushIssueInfo(user, &issues[j]); err != nil {
-				return err
-			}
-
-			pulls := make([]PullRequest, 0)
-			if err = x.Find(&pulls, &PullRequest{IssueID: issues[j].ID}); err != nil {
-				return fmt.Errorf("Can not get pulls of the repo: %v", err)
-			}
-
-			for k := range pulls {
-				if err = PushPullInfo(user, &pulls[k]); err != nil {
-					return err
-				}
-			}
-		}
-
-		branches := make([]ProtectBranch, 0)
-		if err = x.Find(&branches, &ProtectBranch{RepoID: accesses[i].RepoID}); err != nil {
-			return fmt.Errorf("Can not get branches of the repo: %v", err)
-		}
-
-		for j := range branches {
-			if err = PushBranchInfo(user, &branches[j]); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}*/

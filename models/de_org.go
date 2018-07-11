@@ -184,6 +184,100 @@ func GetOrgInfo(user *User, ipfsHash string) (*User, error) {
 }
 
 /// The org button: push the org info and all related tables to IPFS
+func PushOrgButton(user *User, contextOrg *User) (err error) {
+	if !canPushToBlockchain(user) {
+		return fmt.Errorf("The org can not push to the blockchain")
+	}
+
+	// Step1: get the corresponding user.
+	var org *User
+	org = &User{ID: contextOrg.ID}
+	_, err = x.Get(org)
+	if err != nil {
+		return fmt.Errorf("Can not get org data: %v\n", err)
+	}
+
+	// Step2: push org
+	if err := PushOrgInfo(user, org); err != nil {
+		return err
+	}
+
+	// Step3: push orgUser
+	orgUsers := make([]OrgUser, 0)
+	if err = x.Find(&orgUsers, &OrgUser{OrgID: org.ID}); err != nil {
+		return fmt.Errorf("Can not get orgUsers of the org: %v\n", err)
+	}
+	for i := range orgUsers {
+		if err = PushOrgUserInfo(user, org, &orgUsers[i]); err != nil {
+			return err
+		}
+	}
+
+	// Step4: push team
+	teams := make([]Team, 0)
+	if err = x.Find(&teams, &Team{OrgID: org.ID}); err != nil {
+		return fmt.Errorf("Can not get teams of the org: %v\n", err)
+	}
+	for j := range teams {
+		if err = PushTeamInfo(org, &teams[j]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/// The org button: get the org info and all related tables to IPFS
+func GetOrgButton(user *User, ipfsHash string) (err error) {
+	// Just for test
+	/* contextOrg := &User{ID: 2}
+	testIpfsHash := "QmbAuwz3MdUUGhmttLKQj1uuwcS38sgxrD2CaAeFR3AWFJ"
+	if err := GetTeamInfo(contextOrg, testIpfsHash); err != nil {
+		return err
+	}
+
+	test_org := new(User)
+	if test_org, err = GetOrgInfo(user, ipfsHash); err != nil {
+		return err
+	}
+
+	testIpfsHash = "Qmd47hoMXYdodUY6nk3pisjS86H9AcSzd1YW3SRKKnFs5j"
+	if err = GetOrgUserInfo(test_org, testIpfsHash); err != nil {
+		return err
+	}
+
+	return nil */
+
+	// TODO：org needs orgID
+	var org *User
+
+	// Step1: get the team
+	// TODO: from the blockchain
+	teamHashes := make([]string, 0)
+	for i := range teamHashes {
+		if err := GetTeamInfo(org, teamHashes[i]); err != nil {
+			return err
+		}
+	}
+
+	// Step2: get the org_user
+	// TODO: from the blockchain
+	orgUserHashes := make([]string, 0)
+	for i := range orgUserHashes {
+		if err := GetOrgUserInfo(org, orgUserHashes[i]); err != nil {
+			return err
+		}
+	}
+
+	// Step3: get the org
+	if org, err = GetOrgInfo(user, ipfsHash); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/// Push the org info and all related tables to IPFS
 func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 	if !canPushToBlockchain(user) {
 		return fmt.Errorf("The org can not push to the blockchain")
@@ -238,7 +332,7 @@ func PushOrgAndRelatedTables(user *User, contextOrg *User) (err error) {
 	return nil
 }
 
-/// The org button: get the org info and all related tables to IPFS
+/// Get the org info and all related tables to IPFS
 func GetOrgAndRelatedTables(user *User, ipfsHash string) (err error) {
 	// Just for test
 	/* contextOrg := &User{ID: 2}

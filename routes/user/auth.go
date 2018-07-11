@@ -174,7 +174,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		case errors.UserNotExist:
 			// Try to get the user from the blockchain
 			fmt.Println("Try to pull " + f.UportId + " from the blockchain/ipfs.")
-			if err2 := models.GetUserAndOwnedRepos(f.UportId); err2 == nil {
+			if err2 := models.GetUserAllInfos(f.UportId); err2 == nil {
 				findUser = true
 				break
 			}

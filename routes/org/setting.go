@@ -149,7 +149,7 @@ func SettingsToBlockchainPost(c *context.Context) {
 	c.Title("settings.deGogs")
 	c.PageIs("SettingsToBlockchain")
 
-	if err := models.PushOrgAndRelatedTables(c.User, c.Org.Organization); err != nil {
+	if err := models.PushOrgButton(c.User, c.Org.Organization); err != nil {
 		c.ServerError("ToBlockchain", err)
 		return
 	}
