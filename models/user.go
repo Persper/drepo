@@ -50,7 +50,7 @@ const (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	ID        int64
+	ID        int64  `xorm:"pk autoincr"`
 	LowerName string `xorm:"UNIQUE NOT NULL"`
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
