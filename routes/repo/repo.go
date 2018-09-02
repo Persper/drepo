@@ -34,7 +34,7 @@ func MustBeNotBare(c *context.Context) {
 	}
 }
 
-func checkContextUser(c *context.Context, uid int64) *models.User {
+func checkContextUser(c *context.Context, uid string) *models.User {
 	orgs, err := models.GetOwnedOrgsByUserIDDesc(c.User.ID, "updated_unix")
 	if err != nil {
 		c.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
@@ -43,7 +43,7 @@ func checkContextUser(c *context.Context, uid int64) *models.User {
 	c.Data["Orgs"] = orgs
 
 	// Not equal means current user is an organization.
-	if uid == c.User.ID || uid == 0 {
+	if uid == c.User.ID || uid == "" {
 		return c.User
 	}
 
@@ -76,7 +76,8 @@ func Create(c *context.Context) {
 	c.Data["private"] = c.User.LastRepoVisibility
 	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 
-	ctxUser := checkContextUser(c, c.QueryInt64("org"))
+	//ctxUser := checkContextUser(c, c.QueryInt64("org"))
+	ctxUser := checkContextUser(c, c.Query("org"))
 	if c.Written() {
 		return
 	}
@@ -151,7 +152,8 @@ func Migrate(c *context.Context) {
 	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 	c.Data["mirror"] = c.Query("mirror") == "1"
 
-	ctxUser := checkContextUser(c, c.QueryInt64("org"))
+	//ctxUser := checkContextUser(c, c.QueryInt64("org"))
+	ctxUser := checkContextUser(c, c.Query("org"))
 	if c.Written() {
 		return
 	}

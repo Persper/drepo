@@ -20,12 +20,12 @@ var (
 )
 
 // IsOwnedBy returns true if given user is in the owner team.
-func (org *User) IsOwnedBy(userID int64) bool {
+func (org *User) IsOwnedBy(userID string) bool {
 	return IsOrganizationOwner(org.ID, userID)
 }
 
 // IsOrgMember returns true if given user is member of organization.
-func (org *User) IsOrgMember(uid int64) bool {
+func (org *User) IsOrgMember(uid string) bool {
 	return org.IsOrganization() && IsOrganizationMember(org.ID, uid)
 }
 
@@ -80,12 +80,12 @@ func (org *User) GetMembers() error {
 }
 
 // AddMember adds new member to organization.
-func (org *User) AddMember(uid int64) error {
+func (org *User) AddMember(uid string) error {
 	return AddOrgUser(org.ID, uid)
 }
 
 // RemoveMember removes member from organization.
-func (org *User) RemoveMember(uid int64) error {
+func (org *User) RemoveMember(uid string) error {
 	return RemoveOrgUser(org.ID, uid)
 }
 
@@ -104,7 +104,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, org.Name)
+	isExist, err := IsUserExist("", org.Name)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -238,32 +238,32 @@ func DeleteOrganization(org *User) (err error) {
 // OrgUser represents an organization-user relation.
 type OrgUser struct {
 	ID       int64
-	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
-	OrgID    int64 `xorm:"INDEX UNIQUE(s)"`
+	Uid      string `xorm:"INDEX UNIQUE(s)"`
+	OrgID    string `xorm:"INDEX UNIQUE(s)"`
 	IsPublic bool
 	IsOwner  bool
 	NumTeams int
 }
 
 // IsOrganizationOwner returns true if given user is in the owner team.
-func IsOrganizationOwner(orgID, userID int64) bool {
+func IsOrganizationOwner(orgID, userID string) bool {
 	has, _ := x.Where("is_owner = ?", true).And("uid = ?", userID).And("org_id = ?", orgID).Get(new(OrgUser))
 	return has
 }
 
 // IsOrganizationMember returns true if given user is member of organization.
-func IsOrganizationMember(orgId, uid int64) bool {
+func IsOrganizationMember(orgId, uid string) bool {
 	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).Get(new(OrgUser))
 	return has
 }
 
 // IsPublicMembership returns true if given user public his/her membership.
-func IsPublicMembership(orgId, uid int64) bool {
+func IsPublicMembership(orgId, uid string) bool {
 	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
 	return has
 }
 
-func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, error) {
+func getOrgsByUserID(sess *xorm.Session, userID string, showAll bool) ([]*User, error) {
 	orgs := make([]*User, 0, 10)
 	if !showAll {
 		sess.And("`org_user`.is_public=?", true)
@@ -274,38 +274,38 @@ func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, e
 
 // GetOrgsByUserID returns a list of organizations that the given user ID
 // has joined.
-func GetOrgsByUserID(userID int64, showAll bool) ([]*User, error) {
+func GetOrgsByUserID(userID string, showAll bool) ([]*User, error) {
 	return getOrgsByUserID(x.NewSession(), userID, showAll)
 }
 
 // GetOrgsByUserIDDesc returns a list of organizations that the given user ID
 // has joined, ordered descending by the given condition.
-func GetOrgsByUserIDDesc(userID int64, desc string, showAll bool) ([]*User, error) {
+func GetOrgsByUserIDDesc(userID string, desc string, showAll bool) ([]*User, error) {
 	return getOrgsByUserID(x.NewSession().Desc(desc), userID, showAll)
 }
 
-func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
+func getOwnedOrgsByUserID(sess *xorm.Session, userID string) ([]*User, error) {
 	orgs := make([]*User, 0, 10)
 	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
 		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
 }
 
 // GetOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
-func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
+func GetOwnedOrgsByUserID(userID string) ([]*User, error) {
 	sess := x.NewSession()
 	return getOwnedOrgsByUserID(sess, userID)
 }
 
 // GetOwnedOrganizationsByUserIDDesc returns a list of organizations are owned by
 // given user ID, ordered descending by the given condition.
-func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
+func GetOwnedOrgsByUserIDDesc(userID string, desc string) ([]*User, error) {
 	sess := x.NewSession()
 	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
 }
 
 // GetOrgIDsByUserID returns a list of organization IDs that user belongs to.
 // The showPrivate indicates whether to include private memberships.
-func GetOrgIDsByUserID(userID int64, showPrivate bool) ([]int64, error) {
+func GetOrgIDsByUserID(userID string, showPrivate bool) ([]int64, error) {
 	orgIDs := make([]int64, 0, 5)
 	sess := x.Table("org_user").Where("uid = ?", userID)
 	if !showPrivate {
@@ -314,18 +314,18 @@ func GetOrgIDsByUserID(userID int64, showPrivate bool) ([]int64, error) {
 	return orgIDs, sess.Distinct("org_id").Find(&orgIDs)
 }
 
-func getOrgUsersByOrgID(e Engine, orgID int64) ([]*OrgUser, error) {
+func getOrgUsersByOrgID(e Engine, orgID string) ([]*OrgUser, error) {
 	orgUsers := make([]*OrgUser, 0, 10)
 	return orgUsers, e.Where("org_id=?", orgID).Find(&orgUsers)
 }
 
 // GetOrgUsersByOrgID returns all organization-user relations by organization ID.
-func GetOrgUsersByOrgID(orgID int64) ([]*OrgUser, error) {
+func GetOrgUsersByOrgID(orgID string) ([]*OrgUser, error) {
 	return getOrgUsersByOrgID(x, orgID)
 }
 
 // ChangeOrgUserStatus changes public or private membership status.
-func ChangeOrgUserStatus(orgID, uid int64, public bool) error {
+func ChangeOrgUserStatus(orgID, uid string, public bool) error {
 	ou := new(OrgUser)
 	has, err := x.Where("uid=?", uid).And("org_id=?", orgID).Get(ou)
 	if err != nil {
@@ -340,7 +340,7 @@ func ChangeOrgUserStatus(orgID, uid int64, public bool) error {
 }
 
 // AddOrgUser adds new user to given organization.
-func AddOrgUser(orgID, uid int64) error {
+func AddOrgUser(orgID, uid string) error {
 	if IsOrganizationMember(orgID, uid) {
 		return nil
 	}
@@ -368,7 +368,7 @@ func AddOrgUser(orgID, uid int64) error {
 }
 
 // RemoveOrgUser removes user from given organization.
-func RemoveOrgUser(orgID, userID int64) error {
+func RemoveOrgUser(orgID, userID string) error {
 	ou := new(OrgUser)
 
 	has, err := x.Where("uid=?", userID).And("org_id=?", orgID).Get(ou)
@@ -445,7 +445,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	return sess.Commit()
 }
 
-func removeOrgRepo(e Engine, orgID, repoID int64) error {
+func removeOrgRepo(e Engine, orgID string, repoID int64) error {
 	_, err := e.Delete(&TeamRepo{
 		OrgID:  orgID,
 		RepoID: repoID,
@@ -454,11 +454,11 @@ func removeOrgRepo(e Engine, orgID, repoID int64) error {
 }
 
 // RemoveOrgRepo removes all team-repository relations of given organization.
-func RemoveOrgRepo(orgID, repoID int64) error {
+func RemoveOrgRepo(orgID string, repoID int64) error {
 	return removeOrgRepo(x, orgID, repoID)
 }
 
-func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, error) {
+func (org *User) getUserTeams(e Engine, userID string, cols ...string) ([]*Team, error) {
 	teams := make([]*Team, 0, org.NumTeams)
 	return teams, e.Where("team_user.org_id = ?", org.ID).
 		And("team_user.uid = ?", userID).
@@ -467,7 +467,7 @@ func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, 
 }
 
 // GetUserTeamIDs returns of all team IDs of the organization that user is memeber of.
-func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
+func (org *User) GetUserTeamIDs(userID string) ([]int64, error) {
 	teams, err := org.getUserTeams(x, userID, "team.id")
 	if err != nil {
 		return nil, fmt.Errorf("getUserTeams [%d]: %v", userID, err)
@@ -482,13 +482,13 @@ func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
 
 // GetTeams returns all teams that belong to organization,
 // and that the user has joined.
-func (org *User) GetUserTeams(userID int64) ([]*Team, error) {
+func (org *User) GetUserTeams(userID string) ([]*Team, error) {
 	return org.getUserTeams(x, userID)
 }
 
 // GetUserRepositories returns a range of repositories in organization which the user has access to,
 // and total number of records based on given condition.
-func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repository, int64, error) {
+func (org *User) GetUserRepositories(userID string, page, pageSize int) ([]*Repository, int64, error) {
 	teamIDs, err := org.GetUserTeamIDs(userID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("GetUserTeamIDs: %v", err)
@@ -532,7 +532,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 }
 
 // GetUserMirrorRepositories returns mirror repositories of the organization which the user has access to.
-func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
+func (org *User) GetUserMirrorRepositories(userID string) ([]*Repository, error) {
 	teamIDs, err := org.GetUserTeamIDs(userID)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserTeamIDs: %v", err)

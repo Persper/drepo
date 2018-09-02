@@ -71,11 +71,11 @@ type ProtectBranchWhitelist struct {
 	ProtectBranchID int64
 	RepoID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
 	Name            string `xorm:"UNIQUE(protect_branch_whitelist)"`
-	UserID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
+	UserID          string `xorm:"UNIQUE(protect_branch_whitelist)"`
 }
 
 // IsUserInProtectBranchWhitelist returns true if given user is in the whitelist of a branch in a repository.
-func IsUserInProtectBranchWhitelist(repoID, userID int64, branch string) bool {
+func IsUserInProtectBranchWhitelist(repoID int64, userID string, branch string) bool {
 	has, err := x.Where("repo_id = ?", repoID).And("user_id = ?", userID).And("name = ?", branch).Get(new(ProtectBranchWhitelist))
 	return has && err == nil
 }
@@ -150,15 +150,17 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	}
 
 	hasUsersChanged := false
-	validUserIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistUserIDs, ","))
+	//validUserIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistUserIDs, ","))
+	validUserIDs := strings.Split(protectBranch.WhitelistUserIDs, ",")
 	if protectBranch.WhitelistUserIDs != whitelistUserIDs {
 		hasUsersChanged = true
-		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
-		validUserIDs = make([]int64, 0, len(userIDs))
+		//userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
+		userIDs := strings.Split(whitelistUserIDs, ",")
+		validUserIDs = make([]string, 0, len(userIDs))
 		for _, userID := range userIDs {
 			has, err := HasAccess(userID, repo, ACCESS_MODE_WRITE)
 			if err != nil {
-				return fmt.Errorf("HasAccess [user_id: %d, repo_id: %d]: %v", userID, protectBranch.RepoID, err)
+				return fmt.Errorf("HasAccess [user_id: %s, repo_id: %d]: %v", userID, protectBranch.RepoID, err)
 			} else if !has {
 				continue // Drop invalid user ID
 			}
@@ -166,7 +168,8 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 			validUserIDs = append(validUserIDs, userID)
 		}
 
-		protectBranch.WhitelistUserIDs = strings.Join(tool.Int64sToStrings(validUserIDs), ",")
+		//protectBranch.WhitelistUserIDs = strings.Join(tool.Int64sToStrings(validUserIDs), ",")
+		protectBranch.WhitelistUserIDs = strings.Join(validUserIDs, ",")
 	}
 
 	hasTeamsChanged := false
@@ -176,7 +179,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		teamIDs := tool.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
 		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, ACCESS_MODE_WRITE)
 		if err != nil {
-			return fmt.Errorf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
+			return fmt.Errorf("GetTeamsHaveAccessToRepo [org_id: %s, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
 		}
 		validTeamIDs = make([]int64, 0, len(teams))
 		for i := range teams {
@@ -198,10 +201,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	// Merge users and members of teams
 	var whitelists []*ProtectBranchWhitelist
 	if hasUsersChanged || hasTeamsChanged {
-		mergedUserIDs := make(map[int64]bool)
+		mergedUserIDs := make(map[string]bool)
 		for _, userID := range validUserIDs {
 			// Empty whitelist users can cause an ID with 0
-			if userID != 0 {
+			if userID != "" {
 				mergedUserIDs[userID] = true
 			}
 		}

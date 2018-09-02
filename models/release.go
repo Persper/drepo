@@ -25,7 +25,7 @@ type Release struct {
 	ID               int64
 	RepoID           int64
 	Repo             *Repository `xorm:"-"`
-	PublisherID      int64
+	PublisherID      string
 	Publisher        *User `xorm:"-"`
 	TagName          string
 	LowerTagName     string
@@ -69,10 +69,10 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 		r.Publisher, err = getUserByID(e, r.PublisherID)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
-				r.PublisherID = -1
+				r.PublisherID = ""
 				r.Publisher = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(Publisher) [publisher_id: %d]: %v", r.PublisherID, err)
+				return fmt.Errorf("getUserByID.(Publisher) [publisher_id: %s]: %v", r.PublisherID, err)
 			}
 		}
 	}

@@ -51,7 +51,7 @@ const (
 type Comment struct {
 	ID              int64
 	Type            CommentType
-	PosterID        int64
+	PosterID        string
 	Poster          *User  `xorm:"-"`
 	IssueID         int64  `xorm:"INDEX"`
 	Issue           *Issue `xorm:"-"`
@@ -97,7 +97,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 		c.Poster, err = GetUserByID(c.PosterID)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
-				c.PosterID = -1
+				c.PosterID = ""
 				c.Poster = NewGhostUser()
 			} else {
 				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)

@@ -13,7 +13,7 @@ import (
 
 /// ***** START: DeIssueUser *****
 type DeIssueUser struct {
-	UID         int64 `xorm:"INDEX"` // User ID.
+	UID         string `xorm:"INDEX"` // User ID.
 	IsRead      bool
 	IsAssigned  bool
 	IsMentioned bool
@@ -69,7 +69,7 @@ func transferDeIssueLabelToIssueLabel(issue *Issue, deIssueLabel *DeIssueLabel,
 /// ***** START: DeComment *****
 type DeComment struct {
 	Type        CommentType
-	PosterID    int64
+	PosterID    string
 	CommitID    int64
 	Line        int64
 	Content     string `xorm:"TEXT"`
@@ -107,12 +107,12 @@ func transferDeCommentToComment(issue *Issue, deComment *DeComment, comment *Com
 
 type DeIssue struct {
 	Index        int64 `xorm:"UNIQUE(repo_index)"` // Index in one repository.
-	PosterID     int64
+	PosterID     string
 	Title        string `xorm:"name"`
 	Content      string `xorm:"TEXT"`
 	MilestoneID  int64
 	Priority     int
-	AssigneeID   int64
+	AssigneeID   string
 	IsClosed     bool
 	IsPull       bool // Indicates whether is a pull request or not.
 	DeadlineUnix int64

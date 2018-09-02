@@ -32,7 +32,7 @@ func transferDeTeamRepoToTeamRepo(org *User, team *Team, deTeamRepo *DeTeamRepo,
 
 /// ***** START: DeTeamUser *****
 type DeTeamUser struct {
-	UID int64 `xorm:"UNIQUE(s)"`
+	UID string `xorm:"UNIQUE(s)"`
 }
 
 func transferTeamUserToDeTeamUser(teamUser *TeamUser, deTeamUser *DeTeamUser) {

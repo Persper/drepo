@@ -124,7 +124,8 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 }
 
 func prepareUserInfo(c *context.Context) *models.User {
-	u, err := models.GetUserByID(c.ParamsInt64(":userid"))
+	//u, err := models.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := models.GetUserByID(c.Params(":userid"))
 	if err != nil {
 		c.Handle(500, "GetUserByID", err)
 		return nil
@@ -230,7 +231,8 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := models.GetUserByID(c.ParamsInt64(":userid"))
+	//u, err := models.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := models.GetUserByID(c.Params(":userid"))
 	if err != nil {
 		c.Handle(500, "GetUserByID", err)
 		return

@@ -12,7 +12,7 @@ import (
 )
 
 type DeOrgUser struct {
-	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
+	Uid      string `xorm:"INDEX UNIQUE(s)"`
 	IsPublic bool
 }
 

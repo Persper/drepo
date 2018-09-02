@@ -7,7 +7,7 @@ package errors
 import "fmt"
 
 type TwoFactorNotFound struct {
-	UserID int64
+	UserID string
 }
 
 func IsTwoFactorNotFound(err error) bool {

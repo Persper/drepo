@@ -47,7 +47,7 @@ type PushUpdateOptions struct {
 	OldCommitID  string
 	NewCommitID  string
 	RefFullName  string
-	PusherID     int64
+	PusherID     string
 	PusherName   string
 	RepoUserName string
 	RepoName     string

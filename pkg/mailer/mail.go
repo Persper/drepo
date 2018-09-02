@@ -59,7 +59,7 @@ func SendTestMail(email string) error {
 */
 
 type User interface {
-	ID() int64
+	ID() string
 	DisplayName() string
 	Email() string
 	GenerateActivateCode() string

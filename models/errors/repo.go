@@ -8,7 +8,7 @@ import "fmt"
 
 type RepoNotExist struct {
 	ID     int64
-	UserID int64
+	UserID string
 	Name   string
 }
 

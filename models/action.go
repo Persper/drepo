@@ -73,9 +73,9 @@ func init() {
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
 	ID           int64
-	UserID       int64 // Receiver user ID
+	UserID       string // Receiver user ID
 	OpType       ActionType
-	ActUserID    int64  // Doer user ID
+	ActUserID    string // Doer user ID
 	ActUserName  string // Doer user name
 	ActAvatar    string `xorm:"-"`
 	RepoID       int64  `xorm:"INDEX"`
@@ -450,7 +450,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 type CommitRepoActionOptions struct {
 	PusherName  string
-	RepoOwnerID int64
+	RepoOwnerID string
 	RepoName    string
 	RefFullName string
 	OldCommitID string
@@ -670,15 +670,18 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 // GetFeeds returns action list of given user in given context.
 // actorID is the user who's requesting, ctxUserID is the user/org that is requested.
 // actorID can be -1 when isProfile is true or to skip the permission check.
-func GetFeeds(ctxUser *User, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+func GetFeeds(ctxUser *User, actorID, afterID string, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, setting.UI.User.NewsFeedPagingNum)
 	sess := x.Limit(setting.UI.User.NewsFeedPagingNum).Where("user_id = ?", ctxUser.ID).Desc("id")
-	if afterID > 0 {
+	/*if afterID > 0 {
 		sess.And("id < ?", afterID)
+	}*/
+	if afterID != "" {
+		sess.And("id+0 < ?", afterID)
 	}
 	if isProfile {
 		sess.And("is_private = ?", false).And("act_user_id = ?", ctxUser.ID)
-	} else if actorID != -1 && ctxUser.IsOrganization() {
+	} else if actorID != "" && ctxUser.IsOrganization() {
 		// FIXME: only need to get IDs here, not all fields of repository.
 		repos, _, err := ctxUser.GetUserRepositories(actorID, 1, ctxUser.NumRepos)
 		if err != nil {

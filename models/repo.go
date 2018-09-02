@@ -147,7 +147,7 @@ func NewRepoContext() {
 // Repository contains information of a repository.
 type Repository struct {
 	ID            int64
-	OwnerID       int64  `xorm:"UNIQUE(s)"`
+	OwnerID       string `xorm:"UNIQUE(s)"`
 	Owner         *User  `xorm:"-"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Name          string `xorm:"INDEX NOT NULL"`
@@ -240,7 +240,7 @@ func (repo *Repository) loadAttributes(e Engine) (err error) {
 	if repo.Owner == nil {
 		repo.Owner, err = getUserByID(e, repo.OwnerID)
 		if err != nil {
-			return fmt.Errorf("getUserByID [%d]: %v", repo.OwnerID, err)
+			return fmt.Errorf("getUserByID [%s]: %v", repo.OwnerID, err)
 		}
 	}
 
@@ -412,7 +412,7 @@ func (repo *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*U
 	// and just waste 1 unit is cheaper than re-allocate memory once.
 	users := make([]*User, 0, len(accesses)+1)
 	if len(accesses) > 0 {
-		userIDs := make([]int64, len(accesses))
+		userIDs := make([]string, len(accesses))
 		for i := 0; i < len(accesses); i++ {
 			userIDs[i] = accesses[i].UserID
 		}
@@ -440,7 +440,7 @@ func (repo *Repository) GetAssignees() (_ []*User, err error) {
 }
 
 // GetAssigneeByID returns the user that has write access of repository by given ID.
-func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
+func (repo *Repository) GetAssigneeByID(userID string) (*User, error) {
 	return GetAssigneeByID(repo, userID)
 }
 
@@ -455,7 +455,7 @@ func (repo *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) 
 }
 
 // IssueStats returns number of open and closed repository issues by given filter mode.
-func (repo *Repository) IssueStats(userID int64, filterMode FilterMode, isPull bool) (int64, int64) {
+func (repo *Repository) IssueStats(userID string, filterMode FilterMode, isPull bool) (int64, int64) {
 	return GetRepoIssueStats(repo.ID, userID, filterMode, isPull)
 }
 
@@ -488,12 +488,12 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
-func (repo *Repository) HasAccess(userID int64) bool {
+func (repo *Repository) HasAccess(userID string) bool {
 	has, _ := HasAccess(userID, repo, ACCESS_MODE_READ)
 	return has
 }
 
-func (repo *Repository) IsOwnedBy(userID int64) bool {
+func (repo *Repository) IsOwnedBy(userID string) bool {
 	return repo.OwnerID == userID
 }
 
@@ -1110,10 +1110,10 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 	return repo, err
 }
 
-func countRepositories(userID int64, private bool) int64 {
+func countRepositories(userID string, private bool) int64 {
 	sess := x.Where("id > 0")
 
-	if userID > 0 {
+	if userID != "" {
 		sess.And("owner_id = ?", userID)
 	}
 	if !private {
@@ -1131,13 +1131,13 @@ func countRepositories(userID int64, private bool) int64 {
 // Argument private only takes effect when it is false,
 // set it true to count all repositories.
 func CountRepositories(private bool) int64 {
-	return countRepositories(-1, private)
+	return countRepositories("", private)
 }
 
 // CountUserRepositories returns number of repositories user owns.
 // Argument private only takes effect when it is false,
 // set it true to count all repositories.
-func CountUserRepositories(userID int64, private bool) int64 {
+func CountUserRepositories(userID string, private bool) int64 {
 	return countRepositories(userID, private)
 }
 
@@ -1433,7 +1433,7 @@ func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
 }
 
 // DeleteRepository deletes a repository for a user or organization.
-func DeleteRepository(uid, repoID int64) error {
+func DeleteRepository(uid string, repoID int64) error {
 	repo := &Repository{ID: repoID, OwnerID: uid}
 	has, err := x.Get(repo)
 	if err != nil {
@@ -1567,7 +1567,7 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
-func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
+func GetRepositoryByName(ownerID string, name string) (*Repository, error) {
 	repo := &Repository{
 		OwnerID:   ownerID,
 		LowerName: strings.ToLower(name),
@@ -1587,7 +1587,7 @@ func getRepositoryByID(e Engine, id int64) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.RepoNotExist{id, 0, ""}
+		return nil, errors.RepoNotExist{id, "", ""}
 	}
 	return repo, repo.loadAttributes(e)
 }
@@ -1598,7 +1598,7 @@ func GetRepositoryByID(id int64) (*Repository, error) {
 }
 
 type UserRepoOptions struct {
-	UserID   int64
+	UserID   string
 	Private  bool
 	Page     int
 	PageSize int
@@ -1621,7 +1621,7 @@ func GetUserRepositories(opts *UserRepoOptions) ([]*Repository, error) {
 }
 
 // GetUserRepositories returns a list of mirror repositories of given user.
-func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
+func GetUserMirrorRepositories(userID string) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	return repos, x.Where("owner_id = ?", userID).And("is_mirror = ?", true).Find(&repos)
 }
@@ -1633,7 +1633,7 @@ func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err 
 }
 
 // GetUserAndCollaborativeRepositories returns list of repositories the user owns and collaborates.
-func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
+func GetUserAndCollaborativeRepositories(userID string) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	if err := x.Alias("repo").
 		Join("INNER", "collaboration", "collaboration.repo_id = repo.id").
@@ -1661,8 +1661,8 @@ func GetRepositoryCount(u *User) (int64, error) {
 
 type SearchRepoOptions struct {
 	Keyword  string
-	OwnerID  int64
-	UserID   int64 // When set results will contain all public/private repositories user has access to
+	OwnerID  string
+	UserID   string // When set results will contain all public/private repositories user has access to
 	OrderBy  string
 	Private  bool // Include private repositories in results
 	Page     int
@@ -1680,7 +1680,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	sess := x.Alias("repo")
 	// Attempt to find repositories that opts.UserID has access to,
 	// this does not include other people's private repositories even if opts.UserID is an admin.
-	if !opts.Private && opts.UserID > 0 {
+	if !opts.Private && opts.UserID != "" {
 		sess.Join("LEFT", "access", "access.repo_id = repo.id").
 			Where("(repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ?)", opts.UserID, opts.UserID, false)
 	} else {
@@ -1692,7 +1692,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	if len(opts.Keyword) > 0 {
 		sess.And("repo.lower_name LIKE ? OR repo.description LIKE ?", "%"+strings.ToLower(opts.Keyword)+"%", "%"+strings.ToLower(opts.Keyword)+"%")
 	}
-	if opts.OwnerID > 0 {
+	if opts.OwnerID != "" {
 		sess.And("repo.owner_id = ?", opts.OwnerID)
 	}
 
@@ -2036,11 +2036,11 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 	}
 
 	// Load owners
-	userSet := make(map[int64]*User)
+	userSet := make(map[string]*User)
 	for i := range repos {
 		userSet[repos[i].OwnerID] = nil
 	}
-	userIDs := make([]int64, 0, len(userSet))
+	userIDs := make([]string, 0, len(userSet))
 	for userID := range userSet {
 		userIDs = append(userIDs, userID)
 	}
@@ -2131,21 +2131,21 @@ func (repos MirrorRepositoryList) LoadAttributes() error {
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64
-	UserID int64 `xorm:"UNIQUE(watch)"`
-	RepoID int64 `xorm:"UNIQUE(watch)"`
+	UserID string `xorm:"UNIQUE(watch)"`
+	RepoID int64  `xorm:"UNIQUE(watch)"`
 }
 
-func isWatching(e Engine, userID, repoID int64) bool {
+func isWatching(e Engine, userID string, repoID int64) bool {
 	has, _ := e.Get(&Watch{0, userID, repoID})
 	return has
 }
 
 // IsWatching checks if user has watched given repository.
-func IsWatching(userID, repoID int64) bool {
+func IsWatching(userID string, repoID int64) bool {
 	return isWatching(x, userID, repoID)
 }
 
-func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
+func watchRepo(e Engine, userID string, repoID int64, watch bool) (err error) {
 	if watch {
 		if isWatching(e, userID, repoID) {
 			return nil
@@ -2167,7 +2167,7 @@ func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
 }
 
 // Watch or unwatch repository.
-func WatchRepo(userID, repoID int64, watch bool) (err error) {
+func WatchRepo(userID string, repoID int64, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
 
@@ -2237,12 +2237,12 @@ func NotifyWatchers(act *Action) error {
 
 type Star struct {
 	ID     int64
-	UID    int64 `xorm:"UNIQUE(s)"`
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	UID    string `xorm:"UNIQUE(s)"`
+	RepoID int64  `xorm:"UNIQUE(s)"`
 }
 
 // Star or unstar repository.
-func StarRepo(userID, repoID int64, star bool) (err error) {
+func StarRepo(userID string, repoID int64, star bool) (err error) {
 	if star {
 		if IsStaring(userID, repoID) {
 			return nil
@@ -2268,7 +2268,7 @@ func StarRepo(userID, repoID int64, star bool) (err error) {
 }
 
 // IsStaring checks if user has starred given repository.
-func IsStaring(userID, repoID int64) bool {
+func IsStaring(userID string, repoID int64) bool {
 	has, _ := x.Get(&Star{0, userID, repoID})
 	return has
 }
@@ -2293,7 +2293,7 @@ func (repo *Repository) GetStargazers(page int) ([]*User, error) {
 
 // HasForkedRepo checks if given user has already forked a repository.
 // When user has already forked, it returns true along with the repository.
-func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
+func HasForkedRepo(ownerID string, repoID int64) (*Repository, bool, error) {
 	repo := new(Repository)
 	has, err := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
 	if err != nil {

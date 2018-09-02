@@ -44,7 +44,7 @@ const (
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
 	ID          int64
-	OwnerID     int64      `xorm:"INDEX NOT NULL"`
+	OwnerID     string     `xorm:"INDEX NOT NULL"`
 	Name        string     `xorm:"NOT NULL"`
 	Fingerprint string     `xorm:"NOT NULL"`
 	Content     string     `xorm:"TEXT NOT NULL"`
@@ -367,7 +367,7 @@ func checkKeyContent(content string) error {
 	if err != nil {
 		return err
 	} else if has {
-		return ErrKeyAlreadyExist{0, content}
+		return ErrKeyAlreadyExist{"", content}
 	}
 	return nil
 }
@@ -402,7 +402,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 }
 
 // AddPublicKey adds new public key to database and authorized_keys file.
-func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
+func AddPublicKey(ownerID string, name, content string) (*PublicKey, error) {
 	log.Trace(content)
 	if err := checkKeyContent(content); err != nil {
 		return nil, err
@@ -462,7 +462,7 @@ func SearchPublicKeyByContent(content string) (*PublicKey, error) {
 }
 
 // ListPublicKeys returns a list of public keys belongs to given user.
-func ListPublicKeys(uid int64) ([]*PublicKey, error) {
+func ListPublicKeys(uid string) ([]*PublicKey, error) {
 	keys := make([]*PublicKey, 0, 5)
 	return keys, x.Where("owner_id = ?", uid).Find(&keys)
 }

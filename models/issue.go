@@ -30,7 +30,7 @@ type Issue struct {
 	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
 	Repo            *Repository `xorm:"-"`
 	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
-	PosterID        int64
+	PosterID        string
 	Poster          *User    `xorm:"-"`
 	Title           string   `xorm:"name"`
 	Content         string   `xorm:"TEXT"`
@@ -39,7 +39,7 @@ type Issue struct {
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
 	Priority        int
-	AssigneeID      int64
+	AssigneeID      string
 	Assignee        *User `xorm:"-"`
 	IsClosed        bool
 	IsRead          bool         `xorm:"-"`
@@ -91,7 +91,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 		issue.Poster, err = getUserByID(e, issue.PosterID)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
-				issue.PosterID = -1
+				issue.PosterID = ""
 				issue.Poster = NewGhostUser()
 			} else {
 				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", issue.PosterID, err)
@@ -113,7 +113,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 		}
 	}
 
-	if issue.Assignee == nil && issue.AssigneeID > 0 {
+	if issue.Assignee == nil && issue.AssigneeID != "" {
 		issue.Assignee, err = getUserByID(e, issue.AssigneeID)
 		if err != nil {
 			return fmt.Errorf("getUserByID.(assignee) [%d]: %v", issue.AssigneeID, err)
@@ -213,7 +213,7 @@ func (i *Issue) HashTag() string {
 }
 
 // IsPoster returns true if given user by ID is the poster.
-func (i *Issue) IsPoster(uid int64) bool {
+func (i *Issue) IsPoster(uid string) bool {
 	return i.PosterID == uid
 }
 
@@ -385,7 +385,7 @@ func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 }
 
 func (i *Issue) GetAssignee() (err error) {
-	if i.AssigneeID == 0 || i.Assignee != nil {
+	if i.AssigneeID == "" || i.Assignee != nil {
 		return nil
 	}
 
@@ -397,7 +397,7 @@ func (i *Issue) GetAssignee() (err error) {
 }
 
 // ReadBy sets issue to be read by given user.
-func (i *Issue) ReadBy(uid int64) error {
+func (i *Issue) ReadBy(uid string) error {
 	return UpdateIssueUserByRead(uid, i.ID)
 }
 
@@ -588,7 +588,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	return nil
 }
 
-func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
+func (issue *Issue) ChangeAssignee(doer *User, assigneeID string) (err error) {
 	issue.AssigneeID = assigneeID
 	if err = UpdateIssueUserByAssignee(issue); err != nil {
 		return fmt.Errorf("UpdateIssueUserByAssignee: %v", err)
@@ -666,18 +666,18 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 		}
 	}
 
-	if opts.Issue.AssigneeID > 0 {
+	if opts.Issue.AssigneeID != "" {
 		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
 		if err != nil && !errors.IsUserNotExist(err) {
 			return fmt.Errorf("getUserByID: %v", err)
 		}
 
 		// Assume assignee is invalid and drop silently.
-		opts.Issue.AssigneeID = 0
+		opts.Issue.AssigneeID = ""
 		if assignee != nil {
 			valid, err := hasAccess(e, assignee.ID, opts.Repo, ACCESS_MODE_READ)
 			if err != nil {
-				return fmt.Errorf("hasAccess [user_id: %d, repo_id: %d]: %v", assignee.ID, opts.Repo.ID, err)
+				return fmt.Errorf("hasAccess [user_id: %s, repo_id: %d]: %v", assignee.ID, opts.Repo.ID, err)
 			}
 			if valid {
 				opts.Issue.AssigneeID = assignee.ID
@@ -866,10 +866,10 @@ func GetIssueByID(id int64) (*Issue, error) {
 }
 
 type IssuesOptions struct {
-	UserID      int64
-	AssigneeID  int64
+	UserID      string
+	AssigneeID  string
 	RepoID      int64
-	PosterID    int64
+	PosterID    string
 	MilestoneID int64
 	RepoIDs     []int64
 	Page        int
@@ -900,9 +900,9 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
 
-	if opts.AssigneeID > 0 {
+	if opts.AssigneeID != "" {
 		sess.And("issue.assignee_id=?", opts.AssigneeID)
-	} else if opts.PosterID > 0 {
+	} else if opts.PosterID != "" {
 		sess.And("issue.poster_id=?", opts.PosterID)
 	}
 
@@ -939,7 +939,7 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 	if opts.IsMention {
 		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id").And("issue_user.is_mentioned = ?", true)
 
-		if opts.UserID > 0 {
+		if opts.UserID != "" {
 			sess.And("issue_user.uid = ?", opts.UserID)
 		}
 	}
@@ -983,7 +983,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 
 // GetParticipantsByIssueID returns all users who are participated in comments of an issue.
 func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
-	userIDs := make([]int64, 0, 5)
+	userIDs := make([]string, 0, 5)
 	if err := x.Table("comment").Cols("poster_id").
 		Where("issue_id = ?", issueID).
 		Distinct("poster_id").
@@ -1008,7 +1008,7 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	ID          int64
-	UID         int64 `xorm:"INDEX"` // User ID.
+	UID         string `xorm:"INDEX"` // User ID.
 	IssueID     int64
 	RepoID      int64 `xorm:"INDEX"`
 	MilestoneID int64
@@ -1075,7 +1075,7 @@ func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 }
 
 // PairsContains returns true when pairs list contains given issue.
-func PairsContains(ius []*IssueUser, issueId, uid int64) int {
+func PairsContains(ius []*IssueUser, issueId int64, uid string) int {
 	for i := range ius {
 		if ius[i].IssueID == issueId &&
 			ius[i].UID == uid {
@@ -1086,7 +1086,7 @@ func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 }
 
 // GetIssueUsers returns issue-user pairs by given repository and user.
-func GetIssueUsers(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
+func GetIssueUsers(rid int64, uid string, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
 	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UID: uid})
 	return ius, err
@@ -1105,7 +1105,7 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 }
 
 // GetIssueUserPairsByMode returns issue-user pairs by given repository and user.
-func GetIssueUserPairsByMode(userID, repoID int64, filterMode FilterMode, isClosed bool, page int) ([]*IssueUser, error) {
+func GetIssueUserPairsByMode(userID string, repoID int64, filterMode FilterMode, isClosed bool, page int) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
 	sess := x.Limit(20, (page-1)*20).Where("uid=?", userID).And("is_closed=?", isClosed)
 	if repoID > 0 {
@@ -1140,21 +1140,21 @@ func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 		return fmt.Errorf("find mentioned users: %v", err)
 	}
 
-	ids := make([]int64, 0, len(mentions))
+	ids := make([]string, 0, len(mentions))
 	for _, user := range users {
 		ids = append(ids, user.ID)
 		if !user.IsOrganization() || user.NumMembers == 0 {
 			continue
 		}
 
-		memberIDs := make([]int64, 0, user.NumMembers)
+		memberIDs := make([]string, 0, user.NumMembers)
 		orgUsers, err := getOrgUsersByOrgID(e, user.ID)
 		if err != nil {
 			return fmt.Errorf("getOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
 		for _, orgUser := range orgUsers {
-			memberIDs = append(memberIDs, orgUser.ID)
+			memberIDs = append(memberIDs, orgUser.Uid) // id -> uid
 		}
 
 		ids = append(ids, memberIDs...)
@@ -1197,10 +1197,10 @@ func parseCountResult(results []map[string][]byte) int64 {
 
 type IssueStatsOptions struct {
 	RepoID      int64
-	UserID      int64
+	UserID      string
 	Labels      string
 	MilestoneID int64
-	AssigneeID  int64
+	AssigneeID  string
 	FilterMode  FilterMode
 	IsPull      bool
 }
@@ -1223,7 +1223,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 			sess.And("issue.milestone_id = ?", opts.MilestoneID)
 		}
 
-		if opts.AssigneeID > 0 {
+		if opts.AssigneeID != "" {
 			sess.And("assignee_id = ?", opts.AssigneeID)
 		}
 
@@ -1268,7 +1268,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 }
 
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
-func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterMode, isPull bool) *IssueStats {
+func GetUserIssueStats(repoID int64, userID string, repoIDs []int64, filterMode FilterMode, isPull bool) *IssueStats {
 	stats := &IssueStats{}
 	hasAnyRepo := repoID > 0 || len(repoIDs) > 0
 	countSession := func(isClosed, isPull bool, repoID int64, repoIDs []int64) *xorm.Session {
@@ -1326,7 +1326,7 @@ func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterM
 }
 
 // GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
-func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool) (numOpen int64, numClosed int64) {
+func GetRepoIssueStats(repoID int64, userID string, filterMode FilterMode, isPull bool) (numOpen int64, numClosed int64) {
 	countSession := func(isClosed, isPull bool, repoID int64) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", isClosed).
 			And("is_pull = ?", isPull).
@@ -1379,7 +1379,7 @@ func updateIssueUserByAssignee(e *xorm.Session, issue *Issue) (err error) {
 	}
 
 	// Assignee ID equals to 0 means clear assignee.
-	if issue.AssigneeID > 0 {
+	if issue.AssigneeID != "" {
 		if _, err = e.Exec("UPDATE `issue_user` SET is_assigned = ? WHERE uid = ? AND issue_id = ?", true, issue.AssigneeID, issue.ID); err != nil {
 			return err
 		}
@@ -1404,13 +1404,13 @@ func UpdateIssueUserByAssignee(issue *Issue) (err error) {
 }
 
 // UpdateIssueUserByRead updates issue-user relation for reading.
-func UpdateIssueUserByRead(uid, issueID int64) error {
+func UpdateIssueUserByRead(uid string, issueID int64) error {
 	_, err := x.Exec("UPDATE `issue_user` SET is_read=? WHERE uid=? AND issue_id=?", true, uid, issueID)
 	return err
 }
 
 // updateIssueUsersByMentions updates issue-user pairs by mentioning.
-func updateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
+func updateIssueUsersByMentions(e Engine, issueID int64, uids []string) error {
 	for _, uid := range uids {
 		iu := &IssueUser{
 			UID:     uid,

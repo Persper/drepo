@@ -26,7 +26,7 @@ type DePullRequest struct {
 
 	HasMerged      bool
 	MergedCommitID string `xorm:"VARCHAR(40)"`
-	MergerID       int64
+	MergerID       string
 	MergedUnix     int64
 }
 

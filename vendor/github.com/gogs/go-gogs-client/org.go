@@ -11,7 +11,7 @@ import (
 )
 
 type Organization struct {
-	ID          int64  `json:"id"`
+	ID          string `json:"id"`
 	UserName    string `json:"username"`
 	FullName    string `json:"full_name"`
 	AvatarUrl   string `json:"avatar_url"`

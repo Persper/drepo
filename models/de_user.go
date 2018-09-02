@@ -14,7 +14,7 @@ import (
 
 /// ***** START: DeFollow *****
 type DeFollow struct {
-	FollowID int64 `xorm:"UNIQUE(follow)"`
+	FollowID string `xorm:"UNIQUE(follow)"`
 }
 
 func transferFollowToDeFollow(follow *Follow, deFollow *DeFollow) {
@@ -127,7 +127,7 @@ func transferDePubKeyToPubKey(user *User, dePubKey *DePublicKey, pubKey *PublicK
 /// ***** END: DePublicKey *****
 
 type DeUser struct {
-	ID                 int64
+	ID                 string
 	Name               string `xorm:"UNIQUE NOT NULL"`
 	FullName           string
 	Email              string `xorm:"NOT NULL"`

@@ -499,7 +499,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LOGIN_DLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
-		return nil, errors.UserNotExist{0, login}
+		return nil, errors.UserNotExist{"", login}
 	}
 
 	if !autoRegister {
@@ -531,7 +531,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 		IsAdmin:     isAdmin,
 	}
 
-	ok, err := IsUserExist(0, user.Name)
+	ok, err := IsUserExist("", user.Name)
 	if err != nil {
 		return user, err
 	}
@@ -617,9 +617,9 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(login, "@")
 		if idx == -1 {
-			return nil, errors.UserNotExist{0, login}
+			return nil, errors.UserNotExist{"", login}
 		} else if !com.IsSliceContainsStr(strings.Split(cfg.AllowedDomains, ","), login[idx+1:]) {
-			return nil, errors.UserNotExist{0, login}
+			return nil, errors.UserNotExist{"", login}
 		}
 	}
 
@@ -638,7 +638,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, errors.UserNotExist{0, login}
+			return nil, errors.UserNotExist{"", login}
 		}
 		return nil, err
 	}
@@ -678,7 +678,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, errors.UserNotExist{0, login}
+			return nil, errors.UserNotExist{"", login}
 		}
 		return nil, err
 	}
@@ -757,7 +757,7 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 
 	// Non-local login source is always greater than 0
 	if loginSourceID <= 0 {
-		return nil, errors.UserNotExist{-1, username}
+		return nil, errors.UserNotExist{"", username} //{-1, username}
 	}
 
 	source, err := GetLoginSourceByID(loginSourceID)
@@ -818,5 +818,5 @@ func UserLoginUportId(uportid string, loginSourceID int64) (*User, error) {
 	return remoteUserLogin(nil, username, password, source, true)*/
 
 	// TODO
-	return nil, errors.UserNotExist{-1, uportid}
+	return nil, errors.UserNotExist{"", uportid} //{-1, username}
 }

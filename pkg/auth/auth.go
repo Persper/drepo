@@ -24,9 +24,9 @@ func IsAPIPath(url string) bool {
 }
 
 // SignedInID returns the id of signed in user.
-func SignedInID(c *macaron.Context, sess session.Store) int64 {
+func SignedInID(c *macaron.Context, sess session.Store) string {
 	if !models.HasEngine {
-		return 0
+		return ""
 	}
 
 	// Check access token.
@@ -53,7 +53,7 @@ func SignedInID(c *macaron.Context, sess session.Store) int64 {
 				if !models.IsErrAccessTokenNotExist(err) && !models.IsErrAccessTokenEmpty(err) {
 					log.Error(2, "GetAccessTokenBySHA: %v", err)
 				}
-				return 0
+				return ""
 			}
 			t.Updated = time.Now()
 			if err = models.UpdateAccessToken(t); err != nil {
@@ -65,18 +65,19 @@ func SignedInID(c *macaron.Context, sess session.Store) int64 {
 
 	uid := sess.Get("uid")
 	if uid == nil {
-		return 0
+		return ""
 	}
-	if id, ok := uid.(int64); ok {
+	//if id, ok := uid.(int64); ok {
+	if id, ok := uid.(string); ok {
 		if _, err := models.GetUserByID(id); err != nil {
 			if !errors.IsUserNotExist(err) {
 				log.Error(2, "GetUserByID: %v", err)
 			}
-			return 0
+			return ""
 		}
 		return id
 	}
-	return 0
+	return ""
 }
 
 // SignedInUser returns the user object of signed user.
@@ -88,7 +89,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 
 	uid := SignedInID(ctx, sess)
 
-	if uid <= 0 {
+	if uid == "" {
 		if setting.Service.EnableReverseProxyAuth {
 			webAuthUser := ctx.Req.Header.Get(setting.ReverseProxyAuthUser)
 			if len(webAuthUser) > 0 {

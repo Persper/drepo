@@ -68,7 +68,7 @@ func (err ErrEmailAlreadyUsed) Error() string {
 }
 
 type ErrUserOwnRepos struct {
-	UID int64
+	UID string
 }
 
 func IsErrUserOwnRepos(err error) bool {
@@ -81,7 +81,7 @@ func (err ErrUserOwnRepos) Error() string {
 }
 
 type ErrUserHasOrgs struct {
-	UID int64
+	UID string
 }
 
 func IsErrUserHasOrgs(err error) bool {
@@ -147,7 +147,7 @@ func (err ErrKeyNotExist) Error() string {
 }
 
 type ErrKeyAlreadyExist struct {
-	OwnerID int64
+	OwnerID string
 	Content string
 }
 
@@ -161,7 +161,7 @@ func (err ErrKeyAlreadyExist) Error() string {
 }
 
 type ErrKeyNameAlreadyUsed struct {
-	OwnerID int64
+	OwnerID string
 	Name    string
 }
 
@@ -175,7 +175,7 @@ func (err ErrKeyNameAlreadyUsed) Error() string {
 }
 
 type ErrKeyAccessDenied struct {
-	UserID int64
+	UserID string
 	KeyID  int64
 	Note   string
 }
@@ -273,7 +273,7 @@ func (err ErrAccessTokenEmpty) Error() string {
 //         \/     /_____/     \/     \/         \/     \/                    \/
 
 type ErrLastOrgOwner struct {
-	UID int64
+	UID string
 }
 
 func IsErrLastOrgOwner(err error) bool {
@@ -539,7 +539,7 @@ func (err ErrLoginSourceInUse) Error() string {
 //              \/     \/      \/
 
 type ErrTeamAlreadyExist struct {
-	OrgID int64
+	OrgID string
 	Name  string
 }
 

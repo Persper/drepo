@@ -108,7 +108,8 @@ func runHookPreReceive(c *cli.Context) error {
 		bypassRequirePullRequest := false
 
 		// Check if user is in whitelist when enabled
-		userID := com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64()
+		//userID := com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64()
+		userID := os.Getenv(http.ENV_AUTH_USER_ID)
 		if protectBranch.EnableWhitelist {
 			if !models.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
 				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
@@ -227,7 +228,7 @@ func runHookPostReceive(c *cli.Context) error {
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
 			RefFullName:  string(fields[2]),
-			PusherID:     com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64(),
+			PusherID:     os.Getenv(http.ENV_AUTH_USER_ID), //com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64(),
 			PusherName:   os.Getenv(http.ENV_AUTH_USER_NAME),
 			RepoUserName: os.Getenv(http.ENV_REPO_OWNER_NAME),
 			RepoName:     os.Getenv(http.ENV_REPO_NAME),

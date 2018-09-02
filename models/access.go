@@ -54,19 +54,19 @@ func ParseAccessMode(permission string) AccessMode {
 // repository, the members of the owners team are in this table.
 type Access struct {
 	ID     int64
-	UserID int64 `xorm:"UNIQUE(s)"`
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	UserID string `xorm:"UNIQUE(s)"`
+	RepoID int64  `xorm:"UNIQUE(s)"`
 	Mode   AccessMode
 }
 
-func accessLevel(e Engine, userID int64, repo *Repository) (AccessMode, error) {
+func accessLevel(e Engine, userID string, repo *Repository) (AccessMode, error) {
 	mode := ACCESS_MODE_NONE
 	// Everyone has read access to public repository
 	if !repo.IsPrivate {
 		mode = ACCESS_MODE_READ
 	}
 
-	if userID <= 0 {
+	if userID == "" {
 		return mode, nil
 	}
 
@@ -86,17 +86,17 @@ func accessLevel(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 
 // AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the
 // user does not have access.
-func AccessLevel(userID int64, repo *Repository) (AccessMode, error) {
+func AccessLevel(userID string, repo *Repository) (AccessMode, error) {
 	return accessLevel(x, userID, repo)
 }
 
-func hasAccess(e Engine, userID int64, repo *Repository, testMode AccessMode) (bool, error) {
+func hasAccess(e Engine, userID string, repo *Repository, testMode AccessMode) (bool, error) {
 	mode, err := accessLevel(e, userID, repo)
 	return mode >= testMode, err
 }
 
 // HasAccess returns true if someone has the request access level. User can be nil!
-func HasAccess(userID int64, repo *Repository, testMode AccessMode) (bool, error) {
+func HasAccess(userID string, repo *Repository, testMode AccessMode) (bool, error) {
 	return hasAccess(x, userID, repo, testMode)
 }
 
@@ -149,7 +149,7 @@ func maxAccessMode(modes ...AccessMode) AccessMode {
 }
 
 // FIXME: do corss-comparison so reduce deletions and additions to the minimum?
-func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
+func (repo *Repository) refreshAccesses(e Engine, accessMap map[string]AccessMode) (err error) {
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
 		newAccesses = append(newAccesses, Access{
@@ -169,7 +169,7 @@ func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode
 }
 
 // refreshCollaboratorAccesses retrieves repository collaborations with their access modes.
-func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]AccessMode) error {
+func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[string]AccessMode) error {
 	collaborations, err := repo.getCollaborations(e)
 	if err != nil {
 		return fmt.Errorf("getCollaborations: %v", err)
@@ -184,7 +184,7 @@ func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int6
 // except the team whose ID is given. It is used to assign a team ID when
 // remove repository from that team.
 func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
-	accessMap := make(map[int64]AccessMode, 20)
+	accessMap := make(map[string]AccessMode, 20)
 
 	if err = repo.getOwner(e); err != nil {
 		return err
@@ -229,7 +229,7 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 		return repo.recalculateTeamAccesses(e, 0)
 	}
 
-	accessMap := make(map[int64]AccessMode, 10)
+	accessMap := make(map[string]AccessMode, 10)
 	if err := repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
 		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
 	}

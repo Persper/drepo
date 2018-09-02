@@ -77,9 +77,9 @@ func (c *Context) FormErr(names ...string) {
 
 // UserID returns ID of current logged in user.
 // It returns 0 if visitor is anonymous.
-func (c *Context) UserID() int64 {
+func (c *Context) UserID() string {
 	if !c.IsLogged {
-		return 0
+		return ""
 	}
 	return c.User.ID
 }

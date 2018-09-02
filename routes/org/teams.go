@@ -46,8 +46,9 @@ func Teams(c *context.Context) {
 
 /* Add/delete a user to/from teams. */
 func TeamsAction(c *context.Context) {
-	uid := com.StrTo(c.Query("uid")).MustInt64()
-	if uid == 0 {
+	//uid := com.StrTo(c.Query("uid")).MustInt64()
+	uid := c.Query("uid")
+	if uid == "" {
 		c.Redirect(c.Org.OrgLink + "/teams")
 		return
 	}

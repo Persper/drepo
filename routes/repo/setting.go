@@ -212,7 +212,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		newOwner := c.Query("new_owner_name")
-		isExist, err := models.IsUserExist(0, newOwner)
+		isExist, err := models.IsUserExist("", newOwner)
 		if err != nil {
 			c.ServerError("IsUserExist", err)
 			return
@@ -347,7 +347,8 @@ func SettingsCollaborationPost(c *context.Context) {
 
 func ChangeCollaborationAccessMode(c *context.Context) {
 	if err := c.Repo.Repository.ChangeCollaborationAccessMode(
-		c.QueryInt64("uid"),
+		//c.QueryInt64("uid"),
+		c.Query("uid"),
 		models.AccessMode(c.QueryInt("mode"))); err != nil {
 		log.Error(2, "ChangeCollaborationAccessMode: %v", err)
 		return
@@ -357,7 +358,7 @@ func ChangeCollaborationAccessMode(c *context.Context) {
 }
 
 func DeleteCollaboration(c *context.Context) {
-	if err := c.Repo.Repository.DeleteCollaboration(c.QueryInt64("id")); err != nil {
+	if err := c.Repo.Repository.DeleteCollaboration(c.Query("id")); err != nil { //c.QueryInt64("id")
 		c.Flash.Error("DeleteCollaboration: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.settings.remove_collaborator_success"))

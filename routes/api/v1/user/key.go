@@ -37,7 +37,7 @@ func composePublicKeysAPILink() string {
 	return setting.AppURL + "api/v1/user/keys/"
 }
 
-func listPublicKeys(c *context.APIContext, uid int64) {
+func listPublicKeys(c *context.APIContext, uid string) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {
 		c.Error(500, "ListPublicKeys", err)
@@ -84,7 +84,7 @@ func GetPublicKey(c *context.APIContext) {
 }
 
 // CreateUserPublicKey creates new public key to given user by ID.
-func CreateUserPublicKey(c *context.APIContext, form api.CreateKeyOption, uid int64) {
+func CreateUserPublicKey(c *context.APIContext, form api.CreateKeyOption, uid string) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
 		repo.HandleCheckKeyStringError(c, err)

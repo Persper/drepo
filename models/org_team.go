@@ -17,7 +17,7 @@ const OWNER_TEAM = "Owners"
 // Team represents a organization team.
 type Team struct {
 	ID          int64
-	OrgID       int64 `xorm:"INDEX"`
+	OrgID       string `xorm:"INDEX"`
 	LowerName   string
 	Name        string
 	Description string
@@ -49,7 +49,7 @@ func (t *Team) HasWriteAccess() bool {
 }
 
 // IsTeamMember returns true if given user is a member of team.
-func (t *Team) IsMember(userID int64) bool {
+func (t *Team) IsMember(userID string) bool {
 	return IsTeamMember(t.OrgID, t.ID, userID)
 }
 
@@ -87,12 +87,12 @@ func (t *Team) GetMembers() (err error) {
 
 // AddMember adds new membership of the team to the organization,
 // the user will have membership to the organization automatically when needed.
-func (t *Team) AddMember(uid int64) error {
+func (t *Team) AddMember(uid string) error {
 	return AddTeamMember(t.OrgID, t.ID, uid)
 }
 
 // RemoveMember removes member from team of organization.
-func (t *Team) RemoveMember(uid int64) error {
+func (t *Team) RemoveMember(uid string) error {
 	return RemoveTeamMember(t.OrgID, t.ID, uid)
 }
 
@@ -223,7 +223,7 @@ func IsUsableTeamName(name string) error {
 func NewTeam(t *Team) error {
 	if len(t.Name) == 0 {
 		return errors.New("empty team name")
-	} else if t.OrgID == 0 {
+	} else if t.OrgID == "" {
 		return errors.New("OrgID is not assigned")
 	}
 
@@ -265,7 +265,7 @@ func NewTeam(t *Team) error {
 	return sess.Commit()
 }
 
-func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
+func getTeamOfOrgByName(e Engine, orgID string, name string) (*Team, error) {
 	t := &Team{
 		OrgID:     orgID,
 		LowerName: strings.ToLower(name),
@@ -280,7 +280,7 @@ func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 }
 
 // GetTeamOfOrgByName returns team by given team name and organization.
-func GetTeamOfOrgByName(orgID int64, name string) (*Team, error) {
+func GetTeamOfOrgByName(orgID string, name string) (*Team, error) {
 	return getTeamOfOrgByName(x, orgID, name)
 }
 
@@ -300,13 +300,13 @@ func GetTeamByID(teamID int64) (*Team, error) {
 	return getTeamByID(x, teamID)
 }
 
-func getTeamsByOrgID(e Engine, orgID int64) ([]*Team, error) {
+func getTeamsByOrgID(e Engine, orgID string) ([]*Team, error) {
 	teams := make([]*Team, 0, 3)
 	return teams, e.Where("org_id = ?", orgID).Find(&teams)
 }
 
 // GetTeamsByOrgID returns all teams belong to given organization.
-func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
+func GetTeamsByOrgID(orgID string) ([]*Team, error) {
 	return getTeamsByOrgID(x, orgID)
 }
 
@@ -407,18 +407,18 @@ func DeleteTeam(t *Team) error {
 // TeamUser represents an team-user relation.
 type TeamUser struct {
 	ID     int64
-	OrgID  int64 `xorm:"INDEX"`
-	TeamID int64 `xorm:"UNIQUE(s)"`
-	UID    int64 `xorm:"UNIQUE(s)"`
+	OrgID  string `xorm:"INDEX"`
+	TeamID int64  `xorm:"UNIQUE(s)"`
+	UID    string `xorm:"UNIQUE(s)"`
 }
 
-func isTeamMember(e Engine, orgID, teamID, uid int64) bool {
+func isTeamMember(e Engine, orgID string, teamID int64, uid string) bool {
 	has, _ := e.Where("org_id=?", orgID).And("team_id=?", teamID).And("uid=?", uid).Get(new(TeamUser))
 	return has
 }
 
 // IsTeamMember returns true if given user is a member of team.
-func IsTeamMember(orgID, teamID, uid int64) bool {
+func IsTeamMember(orgID string, teamID int64, uid string) bool {
 	return isTeamMember(x, orgID, teamID, uid)
 }
 
@@ -444,7 +444,7 @@ func GetTeamMembers(teamID int64) ([]*User, error) {
 	return getTeamMembers(x, teamID)
 }
 
-func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
+func getUserTeams(e Engine, orgID, userID string) ([]*Team, error) {
 	teamUsers := make([]*TeamUser, 0, 5)
 	if err := e.Where("uid = ?", userID).And("org_id = ?", orgID).Find(&teamUsers); err != nil {
 		return nil, err
@@ -461,13 +461,13 @@ func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
 }
 
 // GetUserTeams returns all teams that user belongs to in given organization.
-func GetUserTeams(orgID, userID int64) ([]*Team, error) {
+func GetUserTeams(orgID, userID string) ([]*Team, error) {
 	return getUserTeams(x, orgID, userID)
 }
 
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
-func AddTeamMember(orgID, teamID, userID int64) error {
+func AddTeamMember(orgID string, teamID int64, userID string) error {
 	if IsTeamMember(orgID, teamID, userID) {
 		return nil
 	}
@@ -527,7 +527,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 	return sess.Commit()
 }
 
-func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
+func removeTeamMember(e Engine, orgID string, teamID int64, uid string) error {
 	if !isTeamMember(e, orgID, teamID, uid) {
 		return nil
 	}
@@ -590,7 +590,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 }
 
 // RemoveTeamMember removes member from given team of given organization.
-func RemoveTeamMember(orgID, teamID, uid int64) error {
+func RemoveTeamMember(orgID string, teamID int64, uid string) error {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
@@ -612,22 +612,22 @@ func RemoveTeamMember(orgID, teamID, uid int64) error {
 // TeamRepo represents an team-repository relation.
 type TeamRepo struct {
 	ID     int64
-	OrgID  int64 `xorm:"INDEX"`
-	TeamID int64 `xorm:"UNIQUE(s)"`
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	OrgID  string `xorm:"INDEX"`
+	TeamID int64  `xorm:"UNIQUE(s)"`
+	RepoID int64  `xorm:"UNIQUE(s)"`
 }
 
-func hasTeamRepo(e Engine, orgID, teamID, repoID int64) bool {
+func hasTeamRepo(e Engine, orgID string, teamID, repoID int64) bool {
 	has, _ := e.Where("org_id = ?", orgID).And("team_id = ?", teamID).And("repo_id = ?", repoID).Get(new(TeamRepo))
 	return has
 }
 
 // HasTeamRepo returns true if given team has access to the repository of the organization.
-func HasTeamRepo(orgID, teamID, repoID int64) bool {
+func HasTeamRepo(orgID string, teamID, repoID int64) bool {
 	return hasTeamRepo(x, orgID, teamID, repoID)
 }
 
-func addTeamRepo(e Engine, orgID, teamID, repoID int64) error {
+func addTeamRepo(e Engine, orgID string, teamID, repoID int64) error {
 	_, err := e.InsertOne(&TeamRepo{
 		OrgID:  orgID,
 		TeamID: teamID,
@@ -637,7 +637,7 @@ func addTeamRepo(e Engine, orgID, teamID, repoID int64) error {
 }
 
 // AddTeamRepo adds new repository relation to team.
-func AddTeamRepo(orgID, teamID, repoID int64) error {
+func AddTeamRepo(orgID string, teamID, repoID int64) error {
 	return addTeamRepo(x, orgID, teamID, repoID)
 }
 
@@ -655,7 +655,7 @@ func RemoveTeamRepo(teamID, repoID int64) error {
 }
 
 // GetTeamsHaveAccessToRepo returns all teams in an organization that have given access level to the repository.
-func GetTeamsHaveAccessToRepo(orgID, repoID int64, mode AccessMode) ([]*Team, error) {
+func GetTeamsHaveAccessToRepo(orgID string, repoID int64, mode AccessMode) ([]*Team, error) {
 	teams := make([]*Team, 0, 5)
 	return teams, x.Where("team.authorize >= ?", mode).
 		Join("INNER", "team_repo", "team_repo.team_id = team.id").

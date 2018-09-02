@@ -45,7 +45,7 @@ func Webhooks(c *context.Context) {
 }
 
 type OrgRepoCtx struct {
-	OrgID       int64
+	OrgID       string
 	RepoID      int64
 	Link        string
 	NewTemplate string

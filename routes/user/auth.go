@@ -217,7 +217,8 @@ func LoginTwoFactor(c *context.Context) {
 }
 
 func LoginTwoFactorPost(c *context.Context) {
-	userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	//userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	userID, ok := c.Session.Get("twoFactorUserID").(string)
 	if !ok {
 		c.NotFound()
 		return
@@ -270,7 +271,8 @@ func LoginTwoFactorRecoveryCode(c *context.Context) {
 }
 
 func LoginTwoFactorRecoveryCodePost(c *context.Context) {
-	userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	//userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	userID, ok := c.Session.Get("twoFactorUserID").(string)
 	if !ok {
 		c.NotFound()
 		return
@@ -385,7 +387,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	}
 
 	// Send confirmation email, no need for social account.
-	if setting.Service.RegisterEmailConfirm && u.ID > 1 {
+	if setting.Service.RegisterEmailConfirm && u.ID != "1" { //u.ID > 1
 		mailer.SendActivateAccountMail(c.Context, models.NewMailerUser(u))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email

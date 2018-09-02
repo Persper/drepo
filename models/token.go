@@ -16,7 +16,7 @@ import (
 // AccessToken represents a personal access token.
 type AccessToken struct {
 	ID   int64
-	UID  int64 `xorm:"INDEX"`
+	UID  string `xorm:"INDEX"`
 	Name string
 	Sha1 string `xorm:"UNIQUE VARCHAR(40)"`
 
@@ -70,7 +70,7 @@ func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 }
 
 // ListAccessTokens returns a list of access tokens belongs to given user.
-func ListAccessTokens(uid int64) ([]*AccessToken, error) {
+func ListAccessTokens(uid string) ([]*AccessToken, error) {
 	tokens := make([]*AccessToken, 0, 5)
 	return tokens, x.Where("uid=?", uid).Desc("id").Find(&tokens)
 }
@@ -82,7 +82,7 @@ func UpdateAccessToken(t *AccessToken) error {
 }
 
 // DeleteAccessTokenOfUserByID deletes access token by given ID.
-func DeleteAccessTokenOfUserByID(userID, id int64) error {
+func DeleteAccessTokenOfUserByID(userID string, id int64) error {
 	_, err := x.Delete(&AccessToken{
 		ID:  id,
 		UID: userID,

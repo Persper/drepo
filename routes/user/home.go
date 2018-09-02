@@ -58,8 +58,9 @@ func getDashboardContextUser(c *context.Context) *models.User {
 // retrieveFeeds loads feeds from database by given context user.
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(c *context.Context, ctxUser *models.User, userID int64, isProfile bool) {
-	actions, err := models.GetFeeds(ctxUser, userID, c.QueryInt64("after_id"), isProfile)
+func retrieveFeeds(c *context.Context, ctxUser *models.User, userID string, isProfile bool) {
+	//actions, err := models.GetFeeds(ctxUser, userID, c.QueryInt64("after_id"), isProfile)
+	actions, err := models.GetFeeds(ctxUser, userID, c.Query("after_id"), isProfile)
 	if err != nil {
 		c.Handle(500, "GetFeeds", err)
 		return
@@ -356,7 +357,7 @@ func Issues(c *context.Context) {
 	c.HTML(200, ISSUES)
 }
 
-func ShowSSHKeys(c *context.Context, uid int64) {
+func ShowSSHKeys(c *context.Context, uid string) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {
 		c.Handle(500, "ListPublicKeys", err)

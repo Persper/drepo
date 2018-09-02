@@ -63,7 +63,7 @@ func ListFollowing(c *context.APIContext) {
 	listUserFollowing(c, u)
 }
 
-func checkUserFollowing(c *context.APIContext, u *models.User, followID int64) {
+func checkUserFollowing(c *context.APIContext, u *models.User, followID string) {
 	if u.IsFollowing(followID) {
 		c.Status(204)
 	} else {

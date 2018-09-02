@@ -62,7 +62,7 @@ type PullRequest struct {
 
 	HasMerged      bool
 	MergedCommitID string `xorm:"VARCHAR(40)"`
-	MergerID       int64
+	MergerID       string
 	Merger         *User     `xorm:"-"`
 	Merged         time.Time `xorm:"-"`
 	MergedUnix     int64
@@ -103,10 +103,10 @@ func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 	if pr.HasMerged && pr.Merger == nil {
 		pr.Merger, err = getUserByID(e, pr.MergerID)
 		if errors.IsUserNotExist(err) {
-			pr.MergerID = -1
+			pr.MergerID = ""
 			pr.Merger = NewGhostUser()
 		} else if err != nil {
-			return fmt.Errorf("getUserByID [%d]: %v", pr.MergerID, err)
+			return fmt.Errorf("getUserByID [%s]: %v", pr.MergerID, err)
 		}
 	}
 

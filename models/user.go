@@ -50,7 +50,7 @@ const (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	ID        int64  `xorm:"pk autoincr"`
+	ID        string `xorm:"pk autoincr"`
 	LowerName string `xorm:"UNIQUE NOT NULL"`
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
@@ -255,7 +255,7 @@ func (u *User) GenerateRandomAvatar() error {
 // to return full URL if user enables Gravatar-like service.
 func (u *User) RelAvatarLink() string {
 	defaultImgUrl := setting.AppSubURL + "/img/avatar_default.png"
-	if u.ID == -1 {
+	if u.ID == "" {
 		return defaultImgUrl
 	}
 
@@ -298,7 +298,7 @@ func (u *User) GetFollowers(page int) ([]*User, error) {
 	return users, sess.Find(&users)
 }
 
-func (u *User) IsFollowing(followID int64) bool {
+func (u *User) IsFollowing(followID string) bool {
 	return IsFollowing(u.ID, followID)
 }
 
@@ -375,7 +375,7 @@ func (u *User) UploadAvatar(data []byte) error {
 
 // DeleteAvatar deletes the user's custom avatar.
 func (u *User) DeleteAvatar() error {
-	log.Trace("DeleteAvatar [%d]: %s", u.ID, u.CustomAvatarPath())
+	log.Trace("DeleteAvatar [%s]: %s", u.ID, u.CustomAvatarPath())
 	os.Remove(u.CustomAvatarPath())
 
 	/* TODO: Delete the avatar from the blockchain. */
@@ -411,12 +411,12 @@ func (u *User) IsOrganization() bool {
 }
 
 // IsUserOrgOwner returns true if user is in the owner team of given organization.
-func (u *User) IsUserOrgOwner(orgId int64) bool {
+func (u *User) IsUserOrgOwner(orgId string) bool {
 	return IsOrganizationOwner(orgId, u.ID)
 }
 
 // IsPublicMember returns true if user public his/her membership in give organization.
-func (u *User) IsPublicMember(orgId int64) bool {
+func (u *User) IsPublicMember(orgId string) bool {
 	return IsPublicMembership(orgId, u.ID)
 }
 
@@ -496,7 +496,7 @@ func (u *User) IsMailable() bool {
 // the user name should be noncased unique.
 // If uid is presented, then check will rule out that one,
 // it is used when update a user name in settings page.
-func IsUserExist(uid int64, name string) (bool, error) {
+func IsUserExist(uid string, name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
@@ -511,7 +511,7 @@ func GetUserSalt() (string, error) {
 // NewGhostUser creates and returns a fake user for someone who has deleted his/her account.
 func NewGhostUser() *User {
 	return &User{
-		ID:        -1,
+		ID:        "",
 		Name:      "Ghost",
 		LowerName: "ghost",
 	}
@@ -557,7 +557,7 @@ func CreateUser(u *User) (err error) {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, u.Name)
+	isExist, err := IsUserExist("", u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -690,7 +690,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, newUserName)
+	isExist, err := IsUserExist("", newUserName)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -930,7 +930,7 @@ func GetUserByKeyID(keyID int64) (*User, error) {
 	return user, nil
 }
 
-func getUserByID(e Engine, id int64) (*User, error) {
+func getUserByID(e Engine, id string) (*User, error) {
 	u := new(User)
 	has, err := e.Id(id).Get(u)
 	if err != nil {
@@ -942,12 +942,12 @@ func getUserByID(e Engine, id int64) (*User, error) {
 }
 
 // GetUserByID returns the user object by given ID if exists.
-func GetUserByID(id int64) (*User, error) {
+func GetUserByID(id string) (*User, error) {
 	return getUserByID(x, id)
 }
 
 // GetAssigneeByID returns the user with write access of repository by given ID.
-func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
+func GetAssigneeByID(repo *Repository, userID string) (*User, error) {
 	has, err := HasAccess(userID, repo, ACCESS_MODE_READ)
 	if err != nil {
 		return nil, err
@@ -960,14 +960,14 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 // GetUserByName returns a user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
-		return nil, errors.UserNotExist{0, name}
+		return nil, errors.UserNotExist{"", name}
 	}
 	u := &User{LowerName: strings.ToLower(name)}
 	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.UserNotExist{0, name}
+		return nil, errors.UserNotExist{"", name}
 	}
 	return u, nil
 }
@@ -988,8 +988,8 @@ func GetUserEmailsByNames(names []string) []string {
 }
 
 // GetUserIDsByNames returns a slice of ids corresponds to names.
-func GetUserIDsByNames(names []string) []int64 {
-	ids := make([]int64, 0, len(names))
+func GetUserIDsByNames(names []string) []string {
+	ids := make([]string, 0, len(names))
 	for _, name := range names {
 		u, err := GetUserByName(name)
 		if err != nil {
@@ -1045,7 +1045,7 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 // GetUserByEmail returns the user object by given e-mail if exists.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
-		return nil, errors.UserNotExist{0, "email"}
+		return nil, errors.UserNotExist{"", "email"}
 	}
 
 	email = strings.ToLower(email)
@@ -1069,7 +1069,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return GetUserByID(emailAddress.UID)
 	}
 
-	return nil, errors.UserNotExist{0, email}
+	return nil, errors.UserNotExist{"", email}
 }
 
 type SearchUserOptions struct {
@@ -1125,17 +1125,17 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 // Follow represents relations of user and his/her followers.
 type Follow struct {
 	ID       int64
-	UserID   int64 `xorm:"UNIQUE(follow)"`
-	FollowID int64 `xorm:"UNIQUE(follow)"`
+	UserID   string `xorm:"UNIQUE(follow)"`
+	FollowID string `xorm:"UNIQUE(follow)"`
 }
 
-func IsFollowing(userID, followID int64) bool {
+func IsFollowing(userID, followID string) bool {
 	has, _ := x.Get(&Follow{UserID: userID, FollowID: followID})
 	return has
 }
 
 // FollowUser marks someone be another's follower.
-func FollowUser(userID, followID int64) (err error) {
+func FollowUser(userID, followID string) (err error) {
 	if userID == followID || IsFollowing(userID, followID) {
 		return nil
 	}
@@ -1161,7 +1161,7 @@ func FollowUser(userID, followID int64) (err error) {
 }
 
 // UnfollowUser unmarks someone be another's follower.
-func UnfollowUser(userID, followID int64) (err error) {
+func UnfollowUser(userID, followID string) (err error) {
 	if userID == followID || !IsFollowing(userID, followID) {
 		return nil
 	}

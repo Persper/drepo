@@ -5,7 +5,6 @@
 package org
 
 import (
-	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models"
@@ -34,8 +33,9 @@ func Members(c *context.Context) {
 }
 
 func MembersAction(c *context.Context) {
-	uid := com.StrTo(c.Query("uid")).MustInt64()
-	if uid == 0 {
+	//uid := com.StrTo(c.Query("uid")).MustInt64()
+	uid := c.Query("uid")
+	if uid == "" {
 		c.Redirect(c.Org.OrgLink + "/members")
 		return
 	}

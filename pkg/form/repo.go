@@ -23,7 +23,7 @@ import (
 //         \/        \/                   \/        \/                        \/       \/ \/
 
 type CreateRepo struct {
-	UserID      int64  `binding:"Required"`
+	UserID      string `binding:"Required"`
 	RepoName    string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private     bool
 	Description string `binding:"MaxSize(255)"`
@@ -41,7 +41,7 @@ type MigrateRepo struct {
 	CloneAddr    string `json:"clone_addr" binding:"Required"`
 	AuthUsername string `json:"auth_username"`
 	AuthPassword string `json:"auth_password"`
-	Uid          int64  `json:"uid" binding:"Required"`
+	Uid          string `json:"uid" binding:"Required"`
 	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `json:"mirror"`
 	Private      bool   `json:"private"`
@@ -217,7 +217,7 @@ type NewIssue struct {
 	Title       string `binding:"Required;MaxSize(255)"`
 	LabelIDs    string `form:"label_ids"`
 	MilestoneID int64
-	AssigneeID  int64
+	AssigneeID  string
 	Content     string
 	Files       []string
 }

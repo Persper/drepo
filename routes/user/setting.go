@@ -577,7 +577,8 @@ func SettingsOrganizations(c *context.Context) {
 }
 
 func SettingsLeaveOrganization(c *context.Context) {
-	if err := models.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
+	//if err := models.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
+	if err := models.RemoveOrgUser(c.Query("id"), c.User.ID); err != nil {
 		if models.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {

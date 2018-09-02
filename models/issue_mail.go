@@ -24,7 +24,7 @@ type mailerUser struct {
 	user *User
 }
 
-func (this mailerUser) ID() int64 {
+func (this mailerUser) ID() string {
 	return this.user.ID
 }
 

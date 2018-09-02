@@ -18,7 +18,7 @@ func (err EmptyName) Error() string {
 }
 
 type UserNotExist struct {
-	UserID int64
+	UserID string
 	Name   string
 }
 

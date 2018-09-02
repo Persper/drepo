@@ -737,10 +737,11 @@ func parseOwnerAndRepo(c *context.Context) (*models.User, *models.Repository) {
 }
 
 func TriggerTask(c *context.Context) {
-	pusherID := c.QueryInt64("pusher")
+	//pusherID := c.QueryInt64("pusher")
+	pusherID := c.Query("pusher")
 	branch := c.Query("branch")
 	secret := c.Query("secret")
-	if len(branch) == 0 || len(secret) == 0 || pusherID <= 0 {
+	if len(branch) == 0 || len(secret) == 0 || pusherID == "" {
 		c.Error(404)
 		log.Trace("TriggerTask: branch or secret is empty, or pusher ID is not valid")
 		return

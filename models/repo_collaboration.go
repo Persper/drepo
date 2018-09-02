@@ -16,7 +16,7 @@ import (
 type Collaboration struct {
 	ID     int64
 	RepoID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	UserID string     `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
 }
 
@@ -34,20 +34,20 @@ func (c *Collaboration) ModeI18nKey() string {
 }
 
 // IsCollaborator returns true if the user is a collaborator of the repository.
-func IsCollaborator(repoID, userID int64) bool {
+func IsCollaborator(repoID int64, userID string) bool {
 	collaboration := &Collaboration{
 		RepoID: repoID,
 		UserID: userID,
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
-		log.Error(2, "get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		log.Error(2, "get collaboration [repo_id: %d, user_id: %s]: %v", repoID, userID, err)
 		return false
 	}
 	return has
 }
 
-func (repo *Repository) IsCollaborator(userID int64) bool {
+func (repo *Repository) IsCollaborator(userID string) bool {
 	return IsCollaborator(repo.ID, userID)
 }
 
@@ -129,7 +129,7 @@ func (repo *Repository) GetCollaborators() ([]*Collaborator, error) {
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
-func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
+func (repo *Repository) ChangeCollaborationAccessMode(userID string, mode AccessMode) error {
 	// Discard invalid input
 	if mode <= ACCESS_MODE_NONE || mode > ACCESS_MODE_OWNER {
 		return nil
@@ -155,7 +155,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 	if repo.Owner.IsOrganization() {
 		teams, err := GetUserTeams(repo.OwnerID, userID)
 		if err != nil {
-			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", repo.OwnerID, userID, err)
+			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %s]: %v", repo.OwnerID, userID, err)
 		}
 		for i := range teams {
 			if mode < teams[i].Authorize {
@@ -196,7 +196,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 }
 
 // DeleteCollaboration removes collaboration relation between the user and repository.
-func DeleteCollaboration(repo *Repository, userID int64) (err error) {
+func DeleteCollaboration(repo *Repository, userID string) (err error) {
 	if !IsCollaborator(repo.ID, userID) {
 		return nil
 	}
@@ -221,6 +221,6 @@ func DeleteCollaboration(repo *Repository, userID int64) (err error) {
 	return sess.Commit()
 }
 
-func (repo *Repository) DeleteCollaboration(userID int64) error {
+func (repo *Repository) DeleteCollaboration(userID string) error {
 	return DeleteCollaboration(repo, userID)
 }

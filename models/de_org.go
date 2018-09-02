@@ -14,7 +14,7 @@ import (
 
 // The org table in the IPFS
 type DeOrg struct {
-	ID                 int64
+	ID                 string
 	Name               string `xorm:"UNIQUE NOT NULL"`
 	FullName           string
 	Location           string

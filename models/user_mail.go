@@ -15,14 +15,14 @@ import (
 // primary email address, but is not obligatory.
 type EmailAddress struct {
 	ID          int64
-	UID         int64  `xorm:"INDEX NOT NULL"`
+	UID         string `xorm:"INDEX NOT NULL"`
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
 	IsPrimary   bool `xorm:"-"`
 }
 
 // GetEmailAddresses returns all email addresses belongs to given user.
-func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
+func GetEmailAddresses(uid string) ([]*EmailAddress, error) {
 	emails := make([]*EmailAddress, 0, 5)
 	if err := x.Where("uid=?", uid).Find(&emails); err != nil {
 		return nil, err

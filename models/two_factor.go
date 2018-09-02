@@ -23,7 +23,7 @@ import (
 // TwoFactor represents a two-factor authentication token.
 type TwoFactor struct {
 	ID          int64
-	UserID      int64 `xorm:"UNIQUE"`
+	UserID      string `xorm:"UNIQUE"`
 	Secret      string
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
@@ -55,15 +55,15 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 }
 
 // IsUserEnabledTwoFactor returns true if user has enabled two-factor authentication.
-func IsUserEnabledTwoFactor(userID int64) bool {
+func IsUserEnabledTwoFactor(userID string) bool {
 	has, err := x.Where("user_id = ?", userID).Get(new(TwoFactor))
 	if err != nil {
-		log.Error(2, "IsUserEnabledTwoFactor [user_id: %d]: %v", userID, err)
+		log.Error(2, "IsUserEnabledTwoFactor [user_id: %s]: %v", userID, err)
 	}
 	return has
 }
 
-func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
+func generateRecoveryCodes(userID string) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, 10)
 	for i := 0; i < 10; i++ {
 		code, err := tool.RandomString(10)
@@ -79,7 +79,7 @@ func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
 }
 
 // NewTwoFactor creates a new two-factor authentication token and recovery codes for given user.
-func NewTwoFactor(userID int64, secret string) error {
+func NewTwoFactor(userID string, secret string) error {
 	t := &TwoFactor{
 		UserID: userID,
 	}
@@ -112,7 +112,7 @@ func NewTwoFactor(userID int64, secret string) error {
 }
 
 // GetTwoFactorByUserID returns two-factor authentication token of given user.
-func GetTwoFactorByUserID(userID int64) (*TwoFactor, error) {
+func GetTwoFactorByUserID(userID string) (*TwoFactor, error) {
 	t := new(TwoFactor)
 	has, err := x.Where("user_id = ?", userID).Get(t)
 	if err != nil {
@@ -125,7 +125,7 @@ func GetTwoFactorByUserID(userID int64) (*TwoFactor, error) {
 }
 
 // DeleteTwoFactor removes two-factor authentication token and recovery codes of given user.
-func DeleteTwoFactor(userID int64) (err error) {
+func DeleteTwoFactor(userID string) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -144,24 +144,24 @@ func DeleteTwoFactor(userID int64) (err error) {
 // TwoFactorRecoveryCode represents a two-factor authentication recovery code.
 type TwoFactorRecoveryCode struct {
 	ID     int64
-	UserID int64
+	UserID string
 	Code   string `xorm:"VARCHAR(11)"`
 	IsUsed bool
 }
 
 // GetRecoveryCodesByUserID returns all recovery codes of given user.
-func GetRecoveryCodesByUserID(userID int64) ([]*TwoFactorRecoveryCode, error) {
+func GetRecoveryCodesByUserID(userID string) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, 0, 10)
 	return recoveryCodes, x.Where("user_id = ?", userID).Find(&recoveryCodes)
 }
 
-func deleteRecoveryCodesByUserID(e Engine, userID int64) error {
+func deleteRecoveryCodesByUserID(e Engine, userID string) error {
 	_, err := e.Where("user_id = ?", userID).Delete(new(TwoFactorRecoveryCode))
 	return err
 }
 
 // RegenerateRecoveryCodes regenerates new set of recovery codes for given user.
-func RegenerateRecoveryCodes(userID int64) error {
+func RegenerateRecoveryCodes(userID string) error {
 	recoveryCodes, err := generateRecoveryCodes(userID)
 	if err != nil {
 		return fmt.Errorf("generateRecoveryCodes: %v", err)
@@ -183,7 +183,7 @@ func RegenerateRecoveryCodes(userID int64) error {
 }
 
 // UseRecoveryCode validates recovery code of given user and marks it is used if valid.
-func UseRecoveryCode(userID int64, code string) error {
+func UseRecoveryCode(userID string, code string) error {
 	recoveryCode := new(TwoFactorRecoveryCode)
 	has, err := x.Where("code = ?", code).And("is_used = ?", false).Get(recoveryCode)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 /// ***** START: DeAccess *****
 type DeAccess struct {
-	UserID int64 `xorm:"UNIQUE(s)"`
+	UserID string `xorm:"UNIQUE(s)"`
 	Mode   AccessMode
 }
 
@@ -35,7 +35,7 @@ func transferDeAcessToAccess(repo *Repository, deAccess *DeAccess, access *Acces
 
 /// ***** START: DeCollaboration *****
 type DeCollaboration struct {
-	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	UserID string     `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
 }
 
@@ -56,7 +56,7 @@ func transferDeCollaToColla(repo *Repository, deColla *DeCollaboration, colla *C
 
 /// ***** START: DeRelease *****
 type DeRelease struct {
-	PublisherID  int64
+	PublisherID  string
 	TagName      string
 	LowerTagName string
 	Target       string
@@ -159,7 +159,7 @@ func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, 
 
 type DeRepo struct {
 	ID            int64
-	OwnerID       int64  `xorm:"UNIQUE(s)"`
+	OwnerID       string `xorm:"UNIQUE(s)"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Name          string `xorm:"INDEX NOT NULL"`
 	Description   string

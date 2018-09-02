@@ -23,12 +23,12 @@ import (
 func Search(c *context.APIContext) {
 	opts := &models.SearchRepoOptions{
 		Keyword:  path.Base(c.Query("q")),
-		OwnerID:  c.QueryInt64("uid"),
+		OwnerID:  c.Query("uid"), //c.QueryInt64("uid"),
 		PageSize: convert.ToCorrectPageSize(c.QueryInt("limit")),
 	}
 
 	// Check visibility.
-	if c.IsLogged && opts.OwnerID > 0 {
+	if c.IsLogged && opts.OwnerID != "" {
 		if c.User.ID == opts.OwnerID {
 			opts.Private = true
 		} else {

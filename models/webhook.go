@@ -94,7 +94,7 @@ const (
 type Webhook struct {
 	ID           int64
 	RepoID       int64
-	OrgID        int64
+	OrgID        string
 	URL          string `xorm:"url TEXT"`
 	ContentType  HookContentType
 	Secret       string `xorm:"TEXT"`
@@ -265,7 +265,7 @@ func GetWebhookOfRepoByID(repoID, id int64) (*Webhook, error) {
 }
 
 // GetWebhookByOrgID returns webhook of organization by given ID.
-func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
+func GetWebhookByOrgID(orgID string, id int64) (*Webhook, error) {
 	return getWebhook(&Webhook{
 		ID:    id,
 		OrgID: orgID,
@@ -317,7 +317,7 @@ func DeleteWebhookOfRepoByID(repoID, id int64) error {
 }
 
 // DeleteWebhookOfOrgByID deletes webhook of organization by given ID.
-func DeleteWebhookOfOrgByID(orgID, id int64) error {
+func DeleteWebhookOfOrgByID(orgID string, id int64) error {
 	return deleteWebhook(&Webhook{
 		ID:    id,
 		OrgID: orgID,
@@ -325,13 +325,13 @@ func DeleteWebhookOfOrgByID(orgID, id int64) error {
 }
 
 // GetWebhooksByOrgID returns all webhooks for an organization.
-func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
+func GetWebhooksByOrgID(orgID string) (ws []*Webhook, err error) {
 	err = x.Find(&ws, &Webhook{OrgID: orgID})
 	return ws, err
 }
 
 // getActiveWebhooksByOrgID returns all active webhooks for an organization.
-func getActiveWebhooksByOrgID(e Engine, orgID int64) ([]*Webhook, error) {
+func getActiveWebhooksByOrgID(e Engine, orgID string) ([]*Webhook, error) {
 	ws := make([]*Webhook, 0, 3)
 	return ws, e.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
 }
@@ -628,7 +628,7 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 		// get hooks for org
 		orgws, err := getActiveWebhooksByOrgID(e, repo.OwnerID)
 		if err != nil {
-			return fmt.Errorf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
+			return fmt.Errorf("getActiveWebhooksByOrgID [%s]: %v", repo.OwnerID, err)
 		}
 		webhooks = append(webhooks, orgws...)
 	}

@@ -123,8 +123,10 @@ func issues(c *context.Context, isPullList bool) {
 	}
 
 	var (
-		assigneeID = c.QueryInt64("assignee")
-		posterID   int64
+		//assigneeID = c.QueryInt64("assignee")
+		assigneeID = c.Query("assignee")
+		//posterID   int64
+		posterID string
 	)
 	filterMode := models.FILTER_MODE_YOUR_REPOS
 	switch viewType {
@@ -138,7 +140,8 @@ func issues(c *context.Context, isPullList bool) {
 		filterMode = models.FILTER_MODE_MENTION
 	}
 
-	var uid int64 = -1
+	//var uid int64 = -1
+	var uid string = ""
 	if c.IsLogged {
 		uid = c.User.ID
 	}
@@ -228,7 +231,7 @@ func issues(c *context.Context, isPullList bool) {
 	}
 
 	if viewType == "assigned" {
-		assigneeID = 0 // Reset ID to prevent unexpected selection of assignee.
+		assigneeID = "" // Reset ID to prevent unexpected selection of assignee.
 	}
 
 	c.Data["IssueStats"] = issueStats
@@ -356,7 +359,7 @@ func NewIssue(c *context.Context) {
 	c.HTML(200, ISSUE_NEW)
 }
 
-func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int64) {
+func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, string) {
 	var (
 		repo = c.Repo.Repository
 		err  error
@@ -364,11 +367,11 @@ func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int
 
 	labels := RetrieveRepoMetas(c, c.Repo.Repository)
 	if c.Written() {
-		return nil, 0, 0
+		return nil, 0, ""
 	}
 
 	if !c.Repo.IsWriter() {
-		return nil, 0, 0
+		return nil, 0, ""
 	}
 
 	// Check labels.
@@ -391,18 +394,18 @@ func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int
 		c.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
 		if err != nil {
 			c.Handle(500, "GetMilestoneByID", err)
-			return nil, 0, 0
+			return nil, 0, ""
 		}
 		c.Data["milestone_id"] = milestoneID
 	}
 
 	// Check assignee.
 	assigneeID := f.AssigneeID
-	if assigneeID > 0 {
+	if assigneeID != "" {
 		c.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
 		if err != nil {
 			c.Handle(500, "GetAssigneeByID", err)
-			return nil, 0, 0
+			return nil, 0, ""
 		}
 		c.Data["assignee_id"] = assigneeID
 	}
@@ -599,7 +602,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	var (
 		tag          models.CommentTag
 		ok           bool
-		marked       = make(map[int64]models.CommentTag)
+		marked       = make(map[string]models.CommentTag)
 		comment      *models.Comment
 		participants = make([]*models.User, 1, 10)
 	)
@@ -817,7 +820,8 @@ func UpdateIssueAssignee(c *context.Context) {
 		return
 	}
 
-	assigneeID := c.QueryInt64("id")
+	//assigneeID := c.QueryInt64("id")
+	assigneeID := c.Query("id")
 	if issue.AssigneeID == assigneeID {
 		c.JSON(200, map[string]interface{}{
 			"ok": true,

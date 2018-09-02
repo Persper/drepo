@@ -274,7 +274,7 @@ type TAccessToken struct {
 func (t *TAccessToken) TableName() string { return "access_token" }
 
 type TUser struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          string `xorm:"pk autoincr"`
 	CreatedUnix int64
 	UpdatedUnix int64
 }
