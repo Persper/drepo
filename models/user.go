@@ -19,6 +19,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	"image/png"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +51,7 @@ const (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	ID        string `xorm:"pk autoincr"`
+	ID        string `xorm:"pk"`
 	LowerName string `xorm:"UNIQUE NOT NULL"`
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
@@ -503,6 +504,14 @@ func IsUserExist(uid string, name string) (bool, error) {
 	return x.Where("id != ?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
+// Check whether the user id exists or not.
+func IsUIDExist(id string) (bool, error) {
+	if len(id) == 0 {
+		return false, nil
+	}
+	return x.Exist(&User{ID: id})
+}
+
 // GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() (string, error) {
 	return tool.RandomString(10)
@@ -584,6 +593,21 @@ func CreateUser(u *User) (err error) {
 	}
 	u.EncodePasswd()
 	u.MaxRepoCreation = -1
+
+	// Get the random user id
+	rand.Seed(time.Now().Unix())
+	for {
+		rnd := rand.Uint64()
+		str := fmt.Sprint(rnd)
+		// TODO: get the uportID
+		u.ID = str
+		has, _ := IsUIDExist(u.ID)
+		if has == false {
+			break
+		}
+	}
+	fmt.Println("Create new u.ID: " + u.ID)
+	fmt.Println(UserPath(u.Name))
 
 	sess := x.NewSession()
 	defer sess.Close()
