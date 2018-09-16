@@ -51,9 +51,9 @@ type PullRequest struct {
 	Issue   *Issue `xorm:"-"`
 	Index   int64
 
-	HeadRepoID   int64
+	HeadRepoID   string
 	HeadRepo     *Repository `xorm:"-"`
-	BaseRepoID   int64
+	BaseRepoID   string
 	BaseRepo     *Repository `xorm:"-"`
 	HeadUserName string
 	HeadBranch   string
@@ -511,7 +511,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 // GetUnmergedPullRequest returnss a pull request that is open and has not been merged
 // by given head/base and repo/branch.
-func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
+func GetUnmergedPullRequest(headRepoID, baseRepoID string, headBranch, baseBranch string) (*PullRequest, error) {
 	pr := new(PullRequest)
 	has, err := x.Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
 		headRepoID, headBranch, baseRepoID, baseBranch, false, false).
@@ -527,7 +527,7 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 
 // GetUnmergedPullRequestsByHeadInfo returnss all pull requests that are open and has not been merged
 // by given head information (repo and branch).
-func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequest, error) {
+func GetUnmergedPullRequestsByHeadInfo(repoID string, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
 	return prs, x.Where("head_repo_id = ? AND head_branch = ? AND has_merged = ? AND issue.is_closed = ?",
 		repoID, branch, false, false).
@@ -536,7 +536,7 @@ func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequ
 
 // GetUnmergedPullRequestsByBaseInfo returnss all pull requests that are open and has not been merged
 // by given base information (repo and branch).
-func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequest, error) {
+func GetUnmergedPullRequestsByBaseInfo(repoID string, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
 	return prs, x.Where("base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
 		repoID, branch, false, false).
@@ -549,7 +549,7 @@ func getPullRequestByID(e Engine, id int64) (*PullRequest, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{id, 0, 0, 0, "", ""}
+		return nil, ErrPullRequestNotExist{id, 0, "", "", "", ""}
 	}
 	return pr, pr.loadAttributes(e)
 }
@@ -567,7 +567,7 @@ func getPullRequestByIssueID(e Engine, issueID int64) (*PullRequest, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{0, issueID, 0, 0, "", ""}
+		return nil, ErrPullRequestNotExist{0, issueID, "", "", "", ""}
 	}
 	return pr, pr.loadAttributes(e)
 }
@@ -728,7 +728,7 @@ func addHeadRepoTasks(prs []*PullRequest) {
 
 // AddTestPullRequestTask adds new test tasks by given head/base repository and head/base branch,
 // and generate new patch for testing as needed.
-func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool) {
+func AddTestPullRequestTask(doer *User, repoID string, branch string, isSync bool) {
 	log.Trace("AddTestPullRequestTask [head_repo_id: %d, head_branch: %s]: finding pull requests", repoID, branch)
 	prs, err := GetUnmergedPullRequestsByHeadInfo(repoID, branch)
 	if err != nil {

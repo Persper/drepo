@@ -78,7 +78,7 @@ type Action struct {
 	ActUserID    string // Doer user ID
 	ActUserName  string // Doer user name
 	ActAvatar    string `xorm:"-"`
-	RepoID       int64  `xorm:"INDEX"`
+	RepoID       string `xorm:"INDEX"`
 	RepoUserName string
 	RepoName     string
 	RefName      string
@@ -688,7 +688,7 @@ func GetFeeds(ctxUser *User, actorID, afterID string, isProfile bool) ([]*Action
 			return nil, fmt.Errorf("GetUserRepositories: %v", err)
 		}
 
-		var repoIDs []int64
+		var repoIDs []string
 		for _, repo := range repos {
 			repoIDs = append(repoIDs, repo.ID)
 		}

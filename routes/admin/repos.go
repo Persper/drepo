@@ -68,7 +68,8 @@ func Repos(c *context.Context) {
 }
 
 func DeleteRepo(c *context.Context) {
-	repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
+	//repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
+	repo, err := models.GetRepositoryByID(c.Query("id"))
 	if err != nil {
 		c.Handle(500, "GetRepositoryByID", err)
 		return

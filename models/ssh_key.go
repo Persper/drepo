@@ -564,8 +564,8 @@ func RewriteAuthorizedKeys() error {
 // DeployKey represents deploy key information and its relation with repository.
 type DeployKey struct {
 	ID          int64
-	KeyID       int64 `xorm:"UNIQUE(s) INDEX"`
-	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
+	KeyID       int64  `xorm:"UNIQUE(s) INDEX"`
+	RepoID      string `xorm:"UNIQUE(s) INDEX"`
 	Name        string
 	Fingerprint string
 	Content     string `xorm:"-"`
@@ -607,7 +607,7 @@ func (k *DeployKey) GetContent() error {
 	return nil
 }
 
-func checkDeployKey(e Engine, keyID, repoID int64, name string) error {
+func checkDeployKey(e Engine, keyID int64, repoID string, name string) error {
 	// Note: We want error detail, not just true or false here.
 	has, err := e.Where("key_id = ? AND repo_id = ?", keyID, repoID).Get(new(DeployKey))
 	if err != nil {
@@ -627,7 +627,7 @@ func checkDeployKey(e Engine, keyID, repoID int64, name string) error {
 }
 
 // addDeployKey adds new key-repo relation.
-func addDeployKey(e *xorm.Session, keyID, repoID int64, name, fingerprint string) (*DeployKey, error) {
+func addDeployKey(e *xorm.Session, keyID int64, repoID string, name, fingerprint string) (*DeployKey, error) {
 	if err := checkDeployKey(e, keyID, repoID, name); err != nil {
 		return nil, err
 	}
@@ -643,13 +643,13 @@ func addDeployKey(e *xorm.Session, keyID, repoID int64, name, fingerprint string
 }
 
 // HasDeployKey returns true if public key is a deploy key of given repository.
-func HasDeployKey(keyID, repoID int64) bool {
+func HasDeployKey(keyID int64, repoID string) bool {
 	has, _ := x.Where("key_id = ? AND repo_id = ?", keyID, repoID).Get(new(DeployKey))
 	return has
 }
 
 // AddDeployKey add new deploy key to database and authorized_keys file.
-func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
+func AddDeployKey(repoID string, name, content string) (*DeployKey, error) {
 	if err := checkKeyContent(content); err != nil {
 		return nil, err
 	}
@@ -692,13 +692,13 @@ func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{id, 0, 0}
+		return nil, ErrDeployKeyNotExist{id, 0, ""}
 	}
 	return key, nil
 }
 
 // GetDeployKeyByRepo returns deploy key by given public key ID and repository ID.
-func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
+func GetDeployKeyByRepo(keyID int64, repoID string) (*DeployKey, error) {
 	key := &DeployKey{
 		KeyID:  keyID,
 		RepoID: repoID,
@@ -766,7 +766,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 }
 
 // ListDeployKeys returns all deploy keys by given repository ID.
-func ListDeployKeys(repoID int64) ([]*DeployKey, error) {
+func ListDeployKeys(repoID string) ([]*DeployKey, error) {
 	keys := make([]*DeployKey, 0, 5)
 	return keys, x.Where("repo_id = ?", repoID).Find(&keys)
 }

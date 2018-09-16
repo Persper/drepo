@@ -32,7 +32,7 @@ func transferDeFollowToFollow(user *User, deFollow *DeFollow, follow *Follow) {
 
 /// ***** START: DeStar *****
 type DeStar struct {
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	RepoID string `xorm:"UNIQUE(s)"`
 }
 
 func transferStarToDeStar(star *Star, deStar *DeStar) {
@@ -50,7 +50,7 @@ func transferDeStarToStar(user *User, deStar *DeStar, star *Star) {
 
 /// ***** START: DeWatch *****
 type DeWatch struct {
-	RepoID int64 `xorm:"UNIQUE(watch)"`
+	RepoID string `xorm:"UNIQUE(watch)"`
 }
 
 func transferWatchToDeWatch(watch *Watch, deWatch *DeWatch) {

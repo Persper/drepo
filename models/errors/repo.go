@@ -7,7 +7,7 @@ package errors
 import "fmt"
 
 type RepoNotExist struct {
-	ID     int64
+	ID     string
 	UserID string
 	Name   string
 }
@@ -48,7 +48,7 @@ func (err InvalidRepoReference) Error() string {
 }
 
 type MirrorNotExist struct {
-	RepoID int64
+	RepoID string
 }
 
 func IsMirrorNotExist(err error) bool {

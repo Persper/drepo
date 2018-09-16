@@ -300,7 +300,7 @@ func PushUserRepoInfo(contextUser *User) (err error) {
 }
 
 func GetUserRepoInfo(contextUser *User) (err error) {
-	/* Get the ipfs file from the blockchain and IPFS> */
+	/* Get the ipfs file from the blockchain and IPFS. */
 	filename := contextUser.UportId + ".txt"
 	user_data, err := ioutil.ReadFile(filename)
 	if err != nil {

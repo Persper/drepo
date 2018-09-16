@@ -58,7 +58,7 @@ func (org *User) GetTeams() error {
 }
 
 // TeamsHaveAccessToRepo returns all teamsthat have given access level to the repository.
-func (org *User) TeamsHaveAccessToRepo(repoID int64, mode AccessMode) ([]*Team, error) {
+func (org *User) TeamsHaveAccessToRepo(repoID string, mode AccessMode) ([]*Team, error) {
 	return GetTeamsHaveAccessToRepo(org.ID, repoID, mode)
 }
 
@@ -89,12 +89,12 @@ func (org *User) RemoveMember(uid string) error {
 	return RemoveOrgUser(org.ID, uid)
 }
 
-func (org *User) removeOrgRepo(e Engine, repoID int64) error {
+func (org *User) removeOrgRepo(e Engine, repoID string) error {
 	return removeOrgRepo(e, org.ID, repoID)
 }
 
 // RemoveOrgRepo removes all team-repository relations of organization.
-func (org *User) RemoveOrgRepo(repoID int64) error {
+func (org *User) RemoveOrgRepo(repoID string) error {
 	return org.removeOrgRepo(x, repoID)
 }
 
@@ -417,7 +417,7 @@ func RemoveOrgUser(orgID, userID string) error {
 	}
 
 	// Delete all repository accesses and unwatch them.
-	repoIDs := make([]int64, len(repos))
+	repoIDs := make([]string, len(repos))
 	for i := range repos {
 		repoIDs = append(repoIDs, repos[i].ID)
 		if err = watchRepo(sess, user.ID, repos[i].ID, false); err != nil {
@@ -445,7 +445,7 @@ func RemoveOrgUser(orgID, userID string) error {
 	return sess.Commit()
 }
 
-func removeOrgRepo(e Engine, orgID string, repoID int64) error {
+func removeOrgRepo(e Engine, orgID string, repoID string) error {
 	_, err := e.Delete(&TeamRepo{
 		OrgID:  orgID,
 		RepoID: repoID,
@@ -454,7 +454,7 @@ func removeOrgRepo(e Engine, orgID string, repoID int64) error {
 }
 
 // RemoveOrgRepo removes all team-repository relations of given organization.
-func RemoveOrgRepo(orgID string, repoID int64) error {
+func RemoveOrgRepo(orgID string, repoID string) error {
 	return removeOrgRepo(x, orgID, repoID)
 }
 

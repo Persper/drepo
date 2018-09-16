@@ -55,7 +55,7 @@ func ParseAccessMode(permission string) AccessMode {
 type Access struct {
 	ID     int64
 	UserID string `xorm:"UNIQUE(s)"`
-	RepoID int64  `xorm:"UNIQUE(s)"`
+	RepoID string `xorm:"UNIQUE(s)"`
 	Mode   AccessMode
 }
 

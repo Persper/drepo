@@ -40,7 +40,8 @@ var (
 )
 
 func parseBaseRepository(c *context.Context) *models.Repository {
-	baseRepo, err := models.GetRepositoryByID(c.ParamsInt64(":repoid"))
+	//baseRepo, err := models.GetRepositoryByID(c.ParamsInt64(":repoid"))
+	baseRepo, err := models.GetRepositoryByID(c.Params(":repoid"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
 		return nil

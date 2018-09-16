@@ -69,13 +69,13 @@ func (br *Branch) GetCommit() (*git.Commit, error) {
 type ProtectBranchWhitelist struct {
 	ID              int64
 	ProtectBranchID int64
-	RepoID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
+	RepoID          string `xorm:"UNIQUE(protect_branch_whitelist)"`
 	Name            string `xorm:"UNIQUE(protect_branch_whitelist)"`
 	UserID          string `xorm:"UNIQUE(protect_branch_whitelist)"`
 }
 
 // IsUserInProtectBranchWhitelist returns true if given user is in the whitelist of a branch in a repository.
-func IsUserInProtectBranchWhitelist(repoID int64, userID string, branch string) bool {
+func IsUserInProtectBranchWhitelist(repoID string, userID string, branch string) bool {
 	has, err := x.Where("repo_id = ?", repoID).And("user_id = ?", userID).And("name = ?", branch).Get(new(ProtectBranchWhitelist))
 	return has && err == nil
 }
@@ -83,7 +83,7 @@ func IsUserInProtectBranchWhitelist(repoID int64, userID string, branch string) 
 // ProtectBranch contains options of a protected branch.
 type ProtectBranch struct {
 	ID                 int64
-	RepoID             int64  `xorm:"UNIQUE(protect_branch)"`
+	RepoID             string `xorm:"UNIQUE(protect_branch)"`
 	Name               string `xorm:"UNIQUE(protect_branch)"`
 	Protected          bool
 	RequirePullRequest bool
@@ -93,7 +93,7 @@ type ProtectBranch struct {
 }
 
 // GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repostiory.
-func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, error) {
+func GetProtectBranchOfRepoByName(repoID string, name string) (*ProtectBranch, error) {
 	protectBranch := &ProtectBranch{
 		RepoID: repoID,
 		Name:   name,
@@ -108,7 +108,7 @@ func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, er
 }
 
 // IsBranchOfRepoRequirePullRequest returns true if branch requires pull request in given repository.
-func IsBranchOfRepoRequirePullRequest(repoID int64, name string) bool {
+func IsBranchOfRepoRequirePullRequest(repoID string, name string) bool {
 	protectBranch, err := GetProtectBranchOfRepoByName(repoID, name)
 	if err != nil {
 		return false
@@ -254,7 +254,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 }
 
 // GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repostiory.
-func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
+func GetProtectBranchesByRepoID(repoID string) ([]*ProtectBranch, error) {
 	protectBranches := make([]*ProtectBranch, 0, 2)
 	return protectBranches, x.Where("repo_id = ? and protected = ?", repoID, true).Asc("name").Find(&protectBranches)
 }

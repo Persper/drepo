@@ -545,7 +545,8 @@ func SettingsRepos(c *context.Context) {
 }
 
 func SettingsLeaveRepo(c *context.Context) {
-	repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
+	//repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
+	repo, err := models.GetRepositoryByID(c.Query("id"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
 		return

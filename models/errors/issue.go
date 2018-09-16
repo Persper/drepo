@@ -8,7 +8,7 @@ import "fmt"
 
 type IssueNotExist struct {
 	ID     int64
-	RepoID int64
+	RepoID string
 	Index  int64
 }
 

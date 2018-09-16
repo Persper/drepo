@@ -55,7 +55,7 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 // Label represents a label of repository for issues.
 type Label struct {
 	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
+	RepoID          string `xorm:"INDEX"`
 	Name            string
 	Color           string `xorm:"VARCHAR(7)"`
 	NumIssues       int
@@ -106,7 +106,7 @@ func NewLabels(labels ...*Label) error {
 // getLabelOfRepoByName returns a label by Name in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
-func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, error) {
+func getLabelOfRepoByName(e Engine, repoID string, labelName string) (*Label, error) {
 	if len(labelName) <= 0 {
 		return nil, ErrLabelNotExist{0, repoID}
 	}
@@ -127,7 +127,7 @@ func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, err
 // getLabelInRepoByID returns a label by ID in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
-func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
+func getLabelOfRepoByID(e Engine, repoID string, labelID int64) (*Label, error) {
 	if labelID <= 0 {
 		return nil, ErrLabelNotExist{labelID, repoID}
 	}
@@ -147,28 +147,28 @@ func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 
 // GetLabelByID returns a label by given ID.
 func GetLabelByID(id int64) (*Label, error) {
-	return getLabelOfRepoByID(x, 0, id)
+	return getLabelOfRepoByID(x, "", id)
 }
 
 // GetLabelOfRepoByID returns a label by ID in given repository.
-func GetLabelOfRepoByID(repoID, labelID int64) (*Label, error) {
+func GetLabelOfRepoByID(repoID string, labelID int64) (*Label, error) {
 	return getLabelOfRepoByID(x, repoID, labelID)
 }
 
 // GetLabelOfRepoByName returns a label by name in given repository.
-func GetLabelOfRepoByName(repoID int64, labelName string) (*Label, error) {
+func GetLabelOfRepoByName(repoID string, labelName string) (*Label, error) {
 	return getLabelOfRepoByName(x, repoID, labelName)
 }
 
 // GetLabelsInRepoByIDs returns a list of labels by IDs in given repository,
 // it silently ignores label IDs that are not belong to the repository.
-func GetLabelsInRepoByIDs(repoID int64, labelIDs []int64) ([]*Label, error) {
+func GetLabelsInRepoByIDs(repoID string, labelIDs []int64) ([]*Label, error) {
 	labels := make([]*Label, 0, len(labelIDs))
 	return labels, x.Where("repo_id = ?", repoID).In("id", tool.Int64sToStrings(labelIDs)).Asc("name").Find(&labels)
 }
 
 // GetLabelsByRepoID returns all labels that belong to given repository by ID.
-func GetLabelsByRepoID(repoID int64) ([]*Label, error) {
+func GetLabelsByRepoID(repoID string) ([]*Label, error) {
 	labels := make([]*Label, 0, 10)
 	return labels, x.Where("repo_id = ?", repoID).Asc("name").Find(&labels)
 }
@@ -206,7 +206,7 @@ func UpdateLabel(l *Label) error {
 }
 
 // DeleteLabel delete a label of given repository.
-func DeleteLabel(repoID, labelID int64) error {
+func DeleteLabel(repoID string, labelID int64) error {
 	_, err := GetLabelOfRepoByID(repoID, labelID)
 	if err != nil {
 		if IsErrLabelNotExist(err) {

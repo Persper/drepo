@@ -158,7 +158,7 @@ func transferDeMilestoneToMilestone(repo *Repository, deMilestone *DeMilestone, 
 /// ***** END: DeMilestone *****
 
 type DeRepo struct {
-	ID            int64
+	ID            string
 	OwnerID       string `xorm:"UNIQUE(s)"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Name          string `xorm:"INDEX NOT NULL"`
@@ -186,7 +186,7 @@ type DeRepo struct {
 	PullsAllowRebase      bool `xorm:"NOT NULL DEFAULT false"`
 
 	IsFork      bool `xorm:"NOT NULL DEFAULT false"`
-	ForkID      int64
+	ForkID      string
 	CreatedUnix int64
 	UpdatedUnix int64
 

@@ -96,12 +96,12 @@ func (t *Team) RemoveMember(uid string) error {
 	return RemoveTeamMember(t.OrgID, t.ID, uid)
 }
 
-func (t *Team) hasRepository(e Engine, repoID int64) bool {
+func (t *Team) hasRepository(e Engine, repoID string) bool {
 	return hasTeamRepo(e, t.OrgID, t.ID, repoID)
 }
 
 // HasRepository returns true if given repository belong to team.
-func (t *Team) HasRepository(repoID int64) bool {
+func (t *Team) HasRepository(repoID string) bool {
 	return t.hasRepository(x, repoID)
 }
 
@@ -188,7 +188,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 }
 
 // RemoveRepository removes repository from team of organization.
-func (t *Team) RemoveRepository(repoID int64) error {
+func (t *Team) RemoveRepository(repoID string) error {
 	if !t.HasRepository(repoID) {
 		return nil
 	}
@@ -614,20 +614,20 @@ type TeamRepo struct {
 	ID     int64
 	OrgID  string `xorm:"INDEX"`
 	TeamID int64  `xorm:"UNIQUE(s)"`
-	RepoID int64  `xorm:"UNIQUE(s)"`
+	RepoID string `xorm:"UNIQUE(s)"`
 }
 
-func hasTeamRepo(e Engine, orgID string, teamID, repoID int64) bool {
+func hasTeamRepo(e Engine, orgID string, teamID int64, repoID string) bool {
 	has, _ := e.Where("org_id = ?", orgID).And("team_id = ?", teamID).And("repo_id = ?", repoID).Get(new(TeamRepo))
 	return has
 }
 
 // HasTeamRepo returns true if given team has access to the repository of the organization.
-func HasTeamRepo(orgID string, teamID, repoID int64) bool {
+func HasTeamRepo(orgID string, teamID int64, repoID string) bool {
 	return hasTeamRepo(x, orgID, teamID, repoID)
 }
 
-func addTeamRepo(e Engine, orgID string, teamID, repoID int64) error {
+func addTeamRepo(e Engine, orgID string, teamID int64, repoID string) error {
 	_, err := e.InsertOne(&TeamRepo{
 		OrgID:  orgID,
 		TeamID: teamID,
@@ -637,11 +637,11 @@ func addTeamRepo(e Engine, orgID string, teamID, repoID int64) error {
 }
 
 // AddTeamRepo adds new repository relation to team.
-func AddTeamRepo(orgID string, teamID, repoID int64) error {
+func AddTeamRepo(orgID string, teamID int64, repoID string) error {
 	return addTeamRepo(x, orgID, teamID, repoID)
 }
 
-func removeTeamRepo(e Engine, teamID, repoID int64) error {
+func removeTeamRepo(e Engine, teamID int64, repoID string) error {
 	_, err := e.Delete(&TeamRepo{
 		TeamID: teamID,
 		RepoID: repoID,
@@ -650,12 +650,12 @@ func removeTeamRepo(e Engine, teamID, repoID int64) error {
 }
 
 // RemoveTeamRepo deletes repository relation to team.
-func RemoveTeamRepo(teamID, repoID int64) error {
+func RemoveTeamRepo(teamID int64, repoID string) error {
 	return removeTeamRepo(x, teamID, repoID)
 }
 
 // GetTeamsHaveAccessToRepo returns all teams in an organization that have given access level to the repository.
-func GetTeamsHaveAccessToRepo(orgID string, repoID int64, mode AccessMode) ([]*Team, error) {
+func GetTeamsHaveAccessToRepo(orgID string, repoID string, mode AccessMode) ([]*Team, error) {
 	teams := make([]*Team, 0, 5)
 	return teams, x.Where("team.authorize >= ?", mode).
 		Join("INNER", "team_repo", "team_repo.team_id = team.id").

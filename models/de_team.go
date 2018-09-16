@@ -13,7 +13,7 @@ import (
 
 /// ***** START: DeTeamRepo *****
 type DeTeamRepo struct {
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	RepoID string `xorm:"UNIQUE(s)"`
 }
 
 func transferTeamRepoToDeTeamRepo(teamRepo *TeamRepo, deTeamRepo *DeTeamRepo) {

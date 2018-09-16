@@ -49,7 +49,7 @@ type HTTPContext struct {
 	*context.Context
 	OwnerName string
 	OwnerSalt string
-	RepoID    int64
+	RepoID    string
 	RepoName  string
 	AuthUser  *models.User
 }
@@ -206,7 +206,7 @@ type serviceHandler struct {
 	authUser  *models.User
 	ownerName string
 	ownerSalt string
-	repoID    int64
+	repoID    string
 	repoName  string
 }
 
@@ -242,7 +242,7 @@ type ComposeHookEnvsOptions struct {
 	AuthUser  *models.User
 	OwnerName string
 	OwnerSalt string
-	RepoID    int64
+	RepoID    string
 	RepoName  string
 	RepoPath  string
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
+	// "github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
@@ -28,7 +28,7 @@ var MirrorQueue = sync.NewUniqueQueue(setting.Repository.MirrorQueueLength)
 // Mirror represents mirror information of a repository.
 type Mirror struct {
 	ID          int64
-	RepoID      int64
+	RepoID      string
 	Repo        *Repository `xorm:"-"`
 	Interval    int         // Hour.
 	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
@@ -242,7 +242,7 @@ func (m *Mirror) runSync() bool {
 	return true
 }
 
-func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
+func getMirrorByRepoID(e Engine, repoID string) (*Mirror, error) {
 	m := &Mirror{RepoID: repoID}
 	has, err := e.Get(m)
 	if err != nil {
@@ -254,7 +254,7 @@ func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
 }
 
 // GetMirrorByRepoID returns mirror information of a repository.
-func GetMirrorByRepoID(repoID int64) (*Mirror, error) {
+func GetMirrorByRepoID(repoID string) (*Mirror, error) {
 	return getMirrorByRepoID(x, repoID)
 }
 
@@ -267,7 +267,7 @@ func UpdateMirror(m *Mirror) error {
 	return updateMirror(x, m)
 }
 
-func DeleteMirrorByRepoID(repoID int64) error {
+func DeleteMirrorByRepoID(repoID string) error {
 	_, err := x.Delete(&Mirror{RepoID: repoID})
 	return err
 }
@@ -304,7 +304,8 @@ func SyncMirrors() {
 		log.Trace("SyncMirrors [repo_id: %v]", repoID)
 		MirrorQueue.Remove(repoID)
 
-		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
+		// m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
+		m, err := GetMirrorByRepoID(repoID)
 		if err != nil {
 			log.Error(2, "GetMirrorByRepoID [%s]: %v", m.RepoID, err)
 			continue

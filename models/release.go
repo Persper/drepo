@@ -23,7 +23,7 @@ import (
 // Release represents a release of repository.
 type Release struct {
 	ID               int64
-	RepoID           int64
+	RepoID           string
 	Repo             *Repository `xorm:"-"`
 	PublisherID      string
 	Publisher        *User `xorm:"-"`
@@ -108,7 +108,7 @@ func (r *Release) APIFormat() *api.Release {
 }
 
 // IsReleaseExist returns true if release with given tag name already exists.
-func IsReleaseExist(repoID int64, tagName string) (bool, error) {
+func IsReleaseExist(repoID string, tagName string) (bool, error) {
 	if len(tagName) == 0 {
 		return false, nil
 	}
@@ -207,7 +207,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 }
 
 // GetRelease returns release by given ID.
-func GetRelease(repoID int64, tagName string) (*Release, error) {
+func GetRelease(repoID string, tagName string) (*Release, error) {
 	isExist, err := IsReleaseExist(repoID, tagName)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func GetReleaseByID(id int64) (*Release, error) {
 // GetPublishedReleasesByRepoID returns a list of published releases of repository.
 // If matches is not empty, only published releases in matches will be returned.
 // In any case, drafts won't be returned by this function.
-func GetPublishedReleasesByRepoID(repoID int64, matches ...string) ([]*Release, error) {
+func GetPublishedReleasesByRepoID(repoID string, matches ...string) ([]*Release, error) {
 	sess := x.Where("repo_id = ?", repoID).And("is_draft = ?", false).Desc("created_unix")
 	if len(matches) > 0 {
 		sess.In("tag_name", matches)
@@ -249,7 +249,7 @@ func GetPublishedReleasesByRepoID(repoID int64, matches ...string) ([]*Release, 
 }
 
 // GetDraftReleasesByRepoID returns all draft releases of repository.
-func GetDraftReleasesByRepoID(repoID int64) ([]*Release, error) {
+func GetDraftReleasesByRepoID(repoID string) ([]*Release, error) {
 	releases := make([]*Release, 0)
 	return releases, x.Where("repo_id = ?", repoID).And("is_draft = ?", true).Find(&releases)
 }
@@ -321,7 +321,7 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 }
 
 // DeleteReleaseOfRepoByID deletes a release and corresponding Git tag by given ID.
-func DeleteReleaseOfRepoByID(repoID, id int64) error {
+func DeleteReleaseOfRepoByID(repoID string, id int64) error {
 	rel, err := GetReleaseByID(id)
 	if err != nil {
 		return fmt.Errorf("GetReleaseByID: %v", err)

@@ -435,7 +435,7 @@ func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, erro
 	return comments, loadCommentsAttributes(e, comments)
 }
 
-func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
+func getCommentsByRepoIDSince(e Engine, repoID string, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
 	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id").Asc("comment.created_unix")
 	if since > 0 {
@@ -462,7 +462,7 @@ func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
 }
 
 // GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
-func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
+func GetCommentsByRepoIDSince(repoID string, since int64) ([]*Comment, error) {
 	return getCommentsByRepoIDSince(x, repoID, since)
 }
 

@@ -93,7 +93,7 @@ const (
 // Webhook represents a web hook object.
 type Webhook struct {
 	ID           int64
-	RepoID       int64
+	RepoID       string
 	OrgID        string
 	URL          string `xorm:"url TEXT"`
 	ContentType  HookContentType
@@ -257,7 +257,7 @@ func GetWebhookByID(id int64) (*Webhook, error) {
 }
 
 // GetWebhookOfRepoByID returns webhook of repository by given ID.
-func GetWebhookOfRepoByID(repoID, id int64) (*Webhook, error) {
+func GetWebhookOfRepoByID(repoID string, id int64) (*Webhook, error) {
 	return getWebhook(&Webhook{
 		ID:     id,
 		RepoID: repoID,
@@ -273,13 +273,13 @@ func GetWebhookByOrgID(orgID string, id int64) (*Webhook, error) {
 }
 
 // getActiveWebhooksByRepoID returns all active webhooks of repository.
-func getActiveWebhooksByRepoID(e Engine, repoID int64) ([]*Webhook, error) {
+func getActiveWebhooksByRepoID(e Engine, repoID string) ([]*Webhook, error) {
 	webhooks := make([]*Webhook, 0, 5)
 	return webhooks, e.Where("repo_id = ?", repoID).And("is_active = ?", true).Find(&webhooks)
 }
 
 // GetWebhooksByRepoID returns all webhooks of a repository.
-func GetWebhooksByRepoID(repoID int64) ([]*Webhook, error) {
+func GetWebhooksByRepoID(repoID string) ([]*Webhook, error) {
 	webhooks := make([]*Webhook, 0, 5)
 	return webhooks, x.Find(&webhooks, &Webhook{RepoID: repoID})
 }
@@ -309,7 +309,7 @@ func deleteWebhook(bean *Webhook) (err error) {
 }
 
 // DeleteWebhookOfRepoByID deletes webhook of repository by given ID.
-func DeleteWebhookOfRepoByID(repoID, id int64) error {
+func DeleteWebhookOfRepoByID(repoID string, id int64) error {
 	return deleteWebhook(&Webhook{
 		ID:     id,
 		RepoID: repoID,
@@ -412,7 +412,7 @@ type HookResponse struct {
 // HookTask represents a hook task.
 type HookTask struct {
 	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
+	RepoID          string `xorm:"INDEX"`
 	HookID          int64
 	UUID            string
 	Type            HookTaskType

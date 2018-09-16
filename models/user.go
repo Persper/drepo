@@ -149,7 +149,7 @@ func (u *User) IsLocal() bool {
 }
 
 // HasForkedRepo checks if user has already forked a repository with given ID.
-func (u *User) HasForkedRepo(repoID int64) bool {
+func (u *User) HasForkedRepo(repoID string) bool {
 	_, has, _ := HasForkedRepo(u.ID, repoID)
 	return has
 }
@@ -505,7 +505,7 @@ func IsUserExist(uid string, name string) (bool, error) {
 }
 
 // Check whether the user id exists or not.
-func IsUIDExist(id string) (bool, error) {
+func IsUserIDExist(id string) (bool, error) {
 	if len(id) == 0 {
 		return false, nil
 	}
@@ -594,14 +594,17 @@ func CreateUser(u *User) (err error) {
 	u.EncodePasswd()
 	u.MaxRepoCreation = -1
 
-	// Get the random user id
+	/**
+	     * Target: make the user id unique over all servers
+		 * Methods: the user uportid + the random user id
+	*/
 	rand.Seed(time.Now().Unix())
 	for {
-		rnd := rand.Uint64()
+		rnd := rand.Uint32()
 		str := fmt.Sprint(rnd)
 		// TODO: get the uportID
 		u.ID = str
-		has, _ := IsUIDExist(u.ID)
+		has, _ := IsUserIDExist(u.ID)
 		if has == false {
 			break
 		}

@@ -138,7 +138,8 @@ func TeamsRepoAction(c *context.Context) {
 		}
 		err = c.Org.Team.AddRepository(repo)
 	case "remove":
-		err = c.Org.Team.RemoveRepository(com.StrTo(c.Query("repoid")).MustInt64())
+		//err = c.Org.Team.RemoveRepository(com.StrTo(c.Query("repoid")).MustInt64())
+		err = c.Org.Team.RemoveRepository(com.StrTo(c.Query("repoid")).String())
 	}
 
 	if err != nil {

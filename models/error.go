@@ -193,7 +193,7 @@ func (err ErrKeyAccessDenied) Error() string {
 type ErrDeployKeyNotExist struct {
 	ID     int64
 	KeyID  int64
-	RepoID int64
+	RepoID string
 }
 
 func IsErrDeployKeyNotExist(err error) bool {
@@ -207,7 +207,7 @@ func (err ErrDeployKeyNotExist) Error() string {
 
 type ErrDeployKeyAlreadyExist struct {
 	KeyID  int64
-	RepoID int64
+	RepoID string
 }
 
 func IsErrDeployKeyAlreadyExist(err error) bool {
@@ -220,7 +220,7 @@ func (err ErrDeployKeyAlreadyExist) Error() string {
 }
 
 type ErrDeployKeyNameAlreadyUsed struct {
-	RepoID int64
+	RepoID string
 	Name   string
 }
 
@@ -398,8 +398,8 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 type ErrPullRequestNotExist struct {
 	ID         int64
 	IssueID    int64
-	HeadRepoID int64
-	BaseRepoID int64
+	HeadRepoID string
+	BaseRepoID string
 	HeadBarcnh string
 	BaseBranch string
 }
@@ -444,7 +444,7 @@ func (err ErrCommentNotExist) Error() string {
 
 type ErrLabelNotExist struct {
 	LabelID int64
-	RepoID  int64
+	RepoID  string
 }
 
 func IsErrLabelNotExist(err error) bool {
@@ -465,7 +465,7 @@ func (err ErrLabelNotExist) Error() string {
 
 type ErrMilestoneNotExist struct {
 	ID     int64
-	RepoID int64
+	RepoID string
 }
 
 func IsErrMilestoneNotExist(err error) bool {

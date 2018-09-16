@@ -18,7 +18,7 @@ type DePullRequest struct {
 	IssueID int64 `xorm:"INDEX"`
 	Index   int64
 
-	HeadRepoID   int64
+	HeadRepoID   string
 	HeadUserName string
 	HeadBranch   string
 	BaseBranch   string

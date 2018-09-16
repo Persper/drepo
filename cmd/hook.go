@@ -92,7 +92,8 @@ func runHookPreReceive(c *cli.Context) error {
 		branchName := strings.TrimPrefix(string(fields[2]), git.BRANCH_PREFIX)
 
 		// Branch protection
-		repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).MustInt64()
+		//repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).MustInt64()
+		repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).String()
 		protectBranch, err := models.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
 			if errors.IsErrBranchNotExist(err) {

@@ -20,7 +20,7 @@ type Permission struct {
 
 // Repository represents a API repository.
 type Repository struct {
-	ID            int64       `json:"id"`
+	ID            string      `json:"id"`
 	Owner         *User       `json:"owner"`
 	Name          string      `json:"name"`
 	FullName      string      `json:"full_name"`

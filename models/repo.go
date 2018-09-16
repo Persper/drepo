@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -146,7 +147,7 @@ func NewRepoContext() {
 
 // Repository contains information of a repository.
 type Repository struct {
-	ID            int64
+	ID            string `xorm:"pk"`
 	OwnerID       string `xorm:"UNIQUE(s)"`
 	Owner         *User  `xorm:"-"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
@@ -194,7 +195,7 @@ type Repository struct {
 	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
-	ForkID   int64
+	ForkID   string
 	BaseRepo *Repository `xorm:"-"`
 
 	Created     time.Time `xorm:"-"`
@@ -249,9 +250,9 @@ func (repo *Repository) loadAttributes(e Engine) (err error) {
 		if err != nil {
 			if errors.IsRepoNotExist(err) {
 				repo.IsFork = false
-				repo.ForkID = 0
+				repo.ForkID = ""
 			} else {
-				return fmt.Errorf("getRepositoryByID [%d]: %v", repo.ForkID, err)
+				return fmt.Errorf("getRepositoryByID [%s]: %v", repo.ForkID, err)
 			}
 		}
 	}
@@ -611,6 +612,14 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 	return isRepositoryExist(x, u, repoName)
 }
 
+// Check whether the repo id exists or not.
+func IsRepoIDExist(id string) (bool, error) {
+	if len(id) == 0 {
+		return false, nil
+	}
+	return x.Exist(&Repository{ID: id})
+}
+
 // CloneLink represents different types of clone URLs of repository.
 type CloneLink struct {
 	SSH   string
@@ -754,7 +763,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		}
 
 		if err = repo.UpdateSize(); err != nil {
-			log.Error(2, "UpdateSize [repo_id: %d]: %v", repo.ID, err)
+			log.Error(2, "UpdateSize [repo_id: %s]: %v", repo.ID, err)
 		}
 
 		// Push the repo content to the IPFS
@@ -1022,6 +1031,26 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return ErrRepoAlreadyExist{owner.Name, repo.Name}
 	}
 
+	/**
+	 * Target: make the repo id unique over all servers
+	 * Methods: the user uportid + the random repo id
+	 */
+	rand.Seed(time.Now().Unix())
+	for {
+		rnd := rand.Uint32()
+		str := fmt.Sprint(rnd)
+		// TODO: get the uportID
+		repo.ID = str
+		has, _ := IsRepoIDExist(repo.ID)
+		if has == false {
+			break
+		}
+	}
+	fmt.Println("Create new repo.ID: " + repo.ID)
+
+	// TODO: fix the fork bug
+	repo.ForkID = "0"
+
 	if _, err = e.Insert(repo); err != nil {
 		return err
 	}
@@ -1165,7 +1194,7 @@ func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 // FilterRepositoryWithIssues selects repositories that are using interal issue tracker
 // and has disabled external tracker from given set.
 // It returns nil if result set is empty.
-func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
+func FilterRepositoryWithIssues(repoIDs []string) ([]string, error) {
 	if len(repoIDs) == 0 {
 		return nil, nil
 	}
@@ -1183,7 +1212,7 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 		return nil, nil
 	}
 
-	repoIDs = make([]int64, len(repos))
+	repoIDs = make([]string, len(repos))
 	for i := range repos {
 		repoIDs[i] = repos[i].ID
 	}
@@ -1349,13 +1378,13 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	return nil
 }
 
-func getRepositoriesByForkID(e Engine, forkID int64) ([]*Repository, error) {
+func getRepositoriesByForkID(e Engine, forkID string) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	return repos, e.Where("fork_id=?", forkID).Find(&repos)
 }
 
 // GetRepositoriesByForkID returns all repositories with given fork ID.
-func GetRepositoriesByForkID(forkID int64) ([]*Repository, error) {
+func GetRepositoriesByForkID(forkID string) ([]*Repository, error) {
 	return getRepositoriesByForkID(x, forkID)
 }
 
@@ -1405,7 +1434,7 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 		for i := range forkRepos {
 			forkRepos[i].IsPrivate = repo.IsPrivate
 			if err = updateRepository(e, forkRepos[i], true); err != nil {
-				return fmt.Errorf("updateRepository[%d]: %v", forkRepos[i].ID, err)
+				return fmt.Errorf("updateRepository[%s]: %v", forkRepos[i].ID, err)
 			}
 		}
 
@@ -1433,7 +1462,7 @@ func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
 }
 
 // DeleteRepository deletes a repository for a user or organization.
-func DeleteRepository(uid string, repoID int64) error {
+func DeleteRepository(uid string, repoID string) error {
 	repo := &Repository{ID: repoID, OwnerID: uid}
 	has, err := x.Get(repo)
 	if err != nil {
@@ -1576,24 +1605,24 @@ func GetRepositoryByName(ownerID string, name string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.RepoNotExist{0, ownerID, name}
+		return nil, errors.RepoNotExist{"", ownerID, name}
 	}
 	return repo, repo.LoadAttributes()
 }
 
-func getRepositoryByID(e Engine, id int64) (*Repository, error) {
+func getRepositoryByID(e Engine, id string) (*Repository, error) {
 	repo := new(Repository)
 	has, err := e.Id(id).Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.RepoNotExist{id, "", ""}
+		return nil, errors.RepoNotExist{"", "", ""}
 	}
 	return repo, repo.loadAttributes(e)
 }
 
 // GetRepositoryByID returns the repository by given id if exists.
-func GetRepositoryByID(id int64) (*Repository, error) {
+func GetRepositoryByID(id string) (*Repository, error) {
 	return getRepositoryByID(x, id)
 }
 
@@ -2003,8 +2032,9 @@ func CheckRepoStats() {
 		log.Error(2, "Select repository count 'num_forks': %v", err)
 	} else {
 		for _, result := range results {
-			id := com.StrTo(result["id"]).MustInt64()
-			log.Trace("Updating repository count 'num_forks': %d", id)
+			//id := com.StrTo(result["id"]).MustInt64()
+			id := com.StrTo(result["id"]).String()
+			log.Trace("Updating repository count 'num_forks': %s", id)
 
 			repo, err := GetRepositoryByID(id)
 			if err != nil {
@@ -2056,13 +2086,13 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 	}
 
 	// Load base repositories
-	repoSet := make(map[int64]*Repository)
+	repoSet := make(map[string]*Repository)
 	for i := range repos {
 		if repos[i].IsFork {
 			repoSet[repos[i].ForkID] = nil
 		}
 	}
-	baseIDs := make([]int64, 0, len(repoSet))
+	baseIDs := make([]string, 0, len(repoSet))
 	for baseID := range repoSet {
 		baseIDs = append(baseIDs, baseID)
 	}
@@ -2094,7 +2124,7 @@ func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
 	}
 
 	// Load mirrors.
-	repoIDs := make([]int64, 0, len(repos))
+	repoIDs := make([]string, 0, len(repos))
 	for i := range repos {
 		if !repos[i].IsMirror {
 			continue
@@ -2107,7 +2137,7 @@ func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
 		return fmt.Errorf("find mirrors: %v", err)
 	}
 
-	set := make(map[int64]*Mirror)
+	set := make(map[string]*Mirror)
 	for i := range mirrors {
 		set[mirrors[i].RepoID] = mirrors[i]
 	}
@@ -2132,20 +2162,20 @@ func (repos MirrorRepositoryList) LoadAttributes() error {
 type Watch struct {
 	ID     int64
 	UserID string `xorm:"UNIQUE(watch)"`
-	RepoID int64  `xorm:"UNIQUE(watch)"`
+	RepoID string `xorm:"UNIQUE(watch)"`
 }
 
-func isWatching(e Engine, userID string, repoID int64) bool {
+func isWatching(e Engine, userID string, repoID string) bool {
 	has, _ := e.Get(&Watch{0, userID, repoID})
 	return has
 }
 
 // IsWatching checks if user has watched given repository.
-func IsWatching(userID string, repoID int64) bool {
+func IsWatching(userID string, repoID string) bool {
 	return isWatching(x, userID, repoID)
 }
 
-func watchRepo(e Engine, userID string, repoID int64, watch bool) (err error) {
+func watchRepo(e Engine, userID string, repoID string, watch bool) (err error) {
 	if watch {
 		if isWatching(e, userID, repoID) {
 			return nil
@@ -2167,17 +2197,17 @@ func watchRepo(e Engine, userID string, repoID int64, watch bool) (err error) {
 }
 
 // Watch or unwatch repository.
-func WatchRepo(userID string, repoID int64, watch bool) (err error) {
+func WatchRepo(userID string, repoID string, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
 
-func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
+func getWatchers(e Engine, repoID string) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
 	return watches, e.Find(&watches, &Watch{RepoID: repoID})
 }
 
 // GetWatchers returns all watchers of given repository.
-func GetWatchers(repoID int64) ([]*Watch, error) {
+func GetWatchers(repoID string) ([]*Watch, error) {
 	return getWatchers(x, repoID)
 }
 
@@ -2238,11 +2268,11 @@ func NotifyWatchers(act *Action) error {
 type Star struct {
 	ID     int64
 	UID    string `xorm:"UNIQUE(s)"`
-	RepoID int64  `xorm:"UNIQUE(s)"`
+	RepoID string `xorm:"UNIQUE(s)"`
 }
 
 // Star or unstar repository.
-func StarRepo(userID string, repoID int64, star bool) (err error) {
+func StarRepo(userID string, repoID string, star bool) (err error) {
 	if star {
 		if IsStaring(userID, repoID) {
 			return nil
@@ -2268,7 +2298,7 @@ func StarRepo(userID string, repoID int64, star bool) (err error) {
 }
 
 // IsStaring checks if user has starred given repository.
-func IsStaring(userID string, repoID int64) bool {
+func IsStaring(userID string, repoID string) bool {
 	has, _ := x.Get(&Star{0, userID, repoID})
 	return has
 }
@@ -2293,7 +2323,7 @@ func (repo *Repository) GetStargazers(page int) ([]*User, error) {
 
 // HasForkedRepo checks if given user has already forked a repository.
 // When user has already forked, it returns true along with the repository.
-func HasForkedRepo(ownerID string, repoID int64) (*Repository, bool, error) {
+func HasForkedRepo(ownerID string, repoID string) (*Repository, bool, error) {
 	repo := new(Repository)
 	has, err := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
 	if err != nil {

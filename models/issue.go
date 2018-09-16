@@ -27,7 +27,7 @@ var (
 // Issue represents an issue or pull request of repository.
 type Issue struct {
 	ID              int64
-	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
+	RepoID          string      `xorm:"INDEX UNIQUE(repo_index)"`
 	Repo            *Repository `xorm:"-"`
 	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	PosterID        string
@@ -818,7 +818,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 }
 
 // GetIssueByIndex returns raw issue without loading attributes by index in a repository.
-func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
+func GetRawIssueByIndex(repoID string, index int64) (*Issue, error) {
 	issue := &Issue{
 		RepoID: repoID,
 		Index:  index,
@@ -833,7 +833,7 @@ func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 }
 
 // GetIssueByIndex returns issue by index in a repository.
-func GetIssueByIndex(repoID, index int64) (*Issue, error) {
+func GetIssueByIndex(repoID string, index int64) (*Issue, error) {
 	issue, err := GetRawIssueByIndex(repoID, index)
 	if err != nil {
 		return nil, err
@@ -847,7 +847,7 @@ func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.IssueNotExist{id, 0, 0}
+		return nil, errors.IssueNotExist{id, "", 0}
 	}
 	return issue, nil
 }
@@ -868,10 +868,10 @@ func GetIssueByID(id int64) (*Issue, error) {
 type IssuesOptions struct {
 	UserID      string
 	AssigneeID  string
-	RepoID      int64
+	RepoID      string
 	PosterID    string
 	MilestoneID int64
-	RepoIDs     []int64
+	RepoIDs     []string
 	Page        int
 	IsClosed    bool
 	IsMention   bool
@@ -888,7 +888,7 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 		opts.Page = 1
 	}
 
-	if opts.RepoID > 0 {
+	if opts.RepoID != "" {
 		sess.Where("issue.repo_id=?", opts.RepoID).And("issue.is_closed=?", opts.IsClosed)
 	} else if opts.RepoIDs != nil {
 		// In case repository IDs are provided but actually no repository has issue.
@@ -1010,7 +1010,7 @@ type IssueUser struct {
 	ID          int64
 	UID         string `xorm:"INDEX"` // User ID.
 	IssueID     int64
-	RepoID      int64 `xorm:"INDEX"`
+	RepoID      string `xorm:"INDEX"`
 	MilestoneID int64
 	IsRead      bool
 	IsAssigned  bool
@@ -1086,7 +1086,7 @@ func PairsContains(ius []*IssueUser, issueId int64, uid string) int {
 }
 
 // GetIssueUsers returns issue-user pairs by given repository and user.
-func GetIssueUsers(rid int64, uid string, isClosed bool) ([]*IssueUser, error) {
+func GetIssueUsers(rid string, uid string, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
 	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UID: uid})
 	return ius, err
@@ -1196,7 +1196,7 @@ func parseCountResult(results []map[string][]byte) int64 {
 }
 
 type IssueStatsOptions struct {
-	RepoID      int64
+	RepoID      string
 	UserID      string
 	Labels      string
 	MilestoneID int64
@@ -1268,13 +1268,13 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 }
 
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
-func GetUserIssueStats(repoID int64, userID string, repoIDs []int64, filterMode FilterMode, isPull bool) *IssueStats {
+func GetUserIssueStats(repoID string, userID string, repoIDs []string, filterMode FilterMode, isPull bool) *IssueStats {
 	stats := &IssueStats{}
-	hasAnyRepo := repoID > 0 || len(repoIDs) > 0
-	countSession := func(isClosed, isPull bool, repoID int64, repoIDs []int64) *xorm.Session {
+	hasAnyRepo := repoID != "" || len(repoIDs) > 0
+	countSession := func(isClosed, isPull bool, repoID string, repoIDs []string) *xorm.Session {
 		sess := x.Where("issue.is_closed = ?", isClosed).And("issue.is_pull = ?", isPull)
 
-		if repoID > 0 {
+		if repoID != "" {
 			sess.And("repo_id = ?", repoID)
 		} else if len(repoIDs) > 0 {
 			sess.In("repo_id", repoIDs)
@@ -1326,8 +1326,8 @@ func GetUserIssueStats(repoID int64, userID string, repoIDs []int64, filterMode 
 }
 
 // GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
-func GetRepoIssueStats(repoID int64, userID string, filterMode FilterMode, isPull bool) (numOpen int64, numClosed int64) {
-	countSession := func(isClosed, isPull bool, repoID int64) *xorm.Session {
+func GetRepoIssueStats(repoID string, userID string, filterMode FilterMode, isPull bool) (numOpen int64, numClosed int64) {
+	countSession := func(isClosed, isPull bool, repoID string) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", isClosed).
 			And("is_pull = ?", isPull).
 			And("repo_id = ?", repoID)

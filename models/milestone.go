@@ -19,7 +19,7 @@ import (
 // Milestone represents a milestone of repository.
 type Milestone struct {
 	ID              int64
-	RepoID          int64 `xorm:"INDEX"`
+	RepoID          string `xorm:"INDEX"`
 	Name            string
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
@@ -130,7 +130,7 @@ func NewMilestone(m *Milestone) (err error) {
 	return sess.Commit()
 }
 
-func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
+func getMilestoneByRepoID(e Engine, repoID string, id int64) (*Milestone, error) {
 	m := &Milestone{
 		ID:     id,
 		RepoID: repoID,
@@ -145,18 +145,18 @@ func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 }
 
 // GetWebhookByRepoID returns the milestone in a repository.
-func GetMilestoneByRepoID(repoID, id int64) (*Milestone, error) {
+func GetMilestoneByRepoID(repoID string, id int64) (*Milestone, error) {
 	return getMilestoneByRepoID(x, repoID, id)
 }
 
 // GetMilestonesByRepoID returns all milestones of a repository.
-func GetMilestonesByRepoID(repoID int64) ([]*Milestone, error) {
+func GetMilestonesByRepoID(repoID string) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, 10)
 	return miles, x.Where("repo_id = ?", repoID).Find(&miles)
 }
 
 // GetMilestones returns a list of milestones of given repository and status.
-func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) {
+func GetMilestones(repoID string, page int, isClosed bool) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, setting.UI.IssuePagingNum)
 	sess := x.Where("repo_id = ? AND is_closed = ?", repoID, isClosed)
 	if page > 0 {
@@ -175,28 +175,28 @@ func UpdateMilestone(m *Milestone) error {
 	return updateMilestone(x, m)
 }
 
-func countRepoMilestones(e Engine, repoID int64) int64 {
+func countRepoMilestones(e Engine, repoID string) int64 {
 	count, _ := e.Where("repo_id=?", repoID).Count(new(Milestone))
 	return count
 }
 
 // CountRepoMilestones returns number of milestones in given repository.
-func CountRepoMilestones(repoID int64) int64 {
+func CountRepoMilestones(repoID string) int64 {
 	return countRepoMilestones(x, repoID)
 }
 
-func countRepoClosedMilestones(e Engine, repoID int64) int64 {
+func countRepoClosedMilestones(e Engine, repoID string) int64 {
 	closed, _ := e.Where("repo_id=? AND is_closed=?", repoID, true).Count(new(Milestone))
 	return closed
 }
 
 // CountRepoClosedMilestones returns number of closed milestones in given repository.
-func CountRepoClosedMilestones(repoID int64) int64 {
+func CountRepoClosedMilestones(repoID string) int64 {
 	return countRepoClosedMilestones(x, repoID)
 }
 
 // MilestoneStats returns number of open and closed milestones of given repository.
-func MilestoneStats(repoID int64) (open int64, closed int64) {
+func MilestoneStats(repoID string) (open int64, closed int64) {
 	open, _ = x.Where("repo_id=? AND is_closed=?", repoID, false).Count(new(Milestone))
 	return open, CountRepoClosedMilestones(repoID)
 }
@@ -363,7 +363,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 }
 
 // DeleteMilestoneOfRepoByID deletes a milestone from a repository.
-func DeleteMilestoneOfRepoByID(repoID, id int64) error {
+func DeleteMilestoneOfRepoByID(repoID string, id int64) error {
 	m, err := GetMilestoneByRepoID(repoID, id)
 	if err != nil {
 		if IsErrMilestoneNotExist(err) {

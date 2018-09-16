@@ -216,14 +216,15 @@ func Issues(c *context.Context) {
 		page = 1
 	}
 
-	repoID := c.QueryInt64("repo")
+	//repoID := c.QueryInt64("repo")
+	repoID := c.Query("repo")
 	isShowClosed := c.Query("state") == "closed"
 
 	// Get repositories.
 	var (
 		err         error
 		repos       []*models.Repository
-		userRepoIDs []int64
+		userRepoIDs []string
 		showRepos   = make([]*models.Repository, 0, 10)
 	)
 	if ctxUser.IsOrganization() {
@@ -240,7 +241,7 @@ func Issues(c *context.Context) {
 		repos = ctxUser.Repos
 	}
 
-	userRepoIDs = make([]int64, 0, len(repos))
+	userRepoIDs = make([]string, 0, len(repos))
 	for _, repo := range repos {
 		userRepoIDs = append(userRepoIDs, repo.ID)
 
@@ -284,7 +285,8 @@ func Issues(c *context.Context) {
 	case models.FILTER_MODE_YOUR_REPOS:
 		// Get all issues from repositories from this user.
 		if userRepoIDs == nil {
-			issueOptions.RepoIDs = []int64{-1}
+			//issueOptions.RepoIDs = []int64{-1}
+			issueOptions.RepoIDs = []string{""}
 		} else {
 			issueOptions.RepoIDs = userRepoIDs
 		}
@@ -304,7 +306,7 @@ func Issues(c *context.Context) {
 		return
 	}
 
-	if repoID > 0 {
+	if repoID != "" {
 		repo, err := models.GetRepositoryByID(repoID)
 		if err != nil {
 			c.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d] %v", repoID, err))

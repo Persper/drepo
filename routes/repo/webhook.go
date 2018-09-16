@@ -46,7 +46,7 @@ func Webhooks(c *context.Context) {
 
 type OrgRepoCtx struct {
 	OrgID       string
-	RepoID      int64
+	RepoID      string
 	Link        string
 	NewTemplate string
 }
@@ -317,7 +317,7 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	c.Data["BaseLink"] = orCtx.Link
 
 	var w *models.Webhook
-	if orCtx.RepoID > 0 {
+	if orCtx.RepoID != "" {
 		w, err = models.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	} else {
 		w, err = models.GetWebhookByOrgID(c.Org.Organization.ID, c.ParamsInt64(":id"))
