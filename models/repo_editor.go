@@ -26,7 +26,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/models/ipfs"
+	// "github.com/gogs/gogs/models/ipfs"
 	"github.com/gogs/gogs/pkg/process"
 	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/tool"
@@ -47,7 +47,7 @@ type ComposeHookEnvsOptions struct {
 	AuthUser  *User
 	OwnerName string
 	OwnerSalt string
-	RepoID    int64
+	RepoID    string
 	RepoName  string
 	RepoPath  string
 }

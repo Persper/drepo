@@ -226,30 +226,6 @@ func (h *serviceHandler) sendFile(contentType string) {
 	http.ServeFile(h.w, h.r, reqFile)
 }
 
-type ComposeHookEnvsOptions struct {
-	AuthUser  *models.User
-	OwnerName string
-	OwnerSalt string
-	RepoID    string
-	RepoName  string
-	RepoPath  string
-}
-
-func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
-	envs := []string{
-		"SSH_ORIGINAL_COMMAND=1",
-		ENV_AUTH_USER_ID + "=" + com.ToStr(opts.AuthUser.ID),
-		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
-		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
-		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
-		ENV_REPO_OWNER_SALT_MD5 + "=" + tool.MD5(opts.OwnerSalt),
-		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
-		ENV_REPO_NAME + "=" + opts.RepoName,
-		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + path.Join(opts.RepoPath, "custom_hooks"),
-	}
-	return envs
-}
-
 func serviceRPC(h serviceHandler, service string) {
 	defer h.r.Body.Close()
 

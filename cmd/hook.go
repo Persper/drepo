@@ -92,7 +92,7 @@ func runHookPreReceive(c *cli.Context) error {
 
 		// Branch protection
 		//repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).MustInt64()
-		repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).String()
+		repoID := com.StrTo(os.Getenv(models.ENV_REPO_ID)).String()
 		protectBranch, err := models.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
 			if errors.IsErrBranchNotExist(err) {
@@ -109,7 +109,7 @@ func runHookPreReceive(c *cli.Context) error {
 
 		// Check if user is in whitelist when enabled
 		//userID := com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64()
-		userID := os.Getenv(http.ENV_AUTH_USER_ID)
+		userID := os.Getenv(models.ENV_AUTH_USER_ID)
 		if protectBranch.EnableWhitelist {
 			if !models.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
 				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
@@ -228,10 +228,10 @@ func runHookPostReceive(c *cli.Context) error {
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
 			RefFullName:  string(fields[2]),
-			PusherID:     os.Getenv(http.ENV_AUTH_USER_ID), //com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64(),
-			PusherName:   os.Getenv(http.ENV_AUTH_USER_NAME),
-			RepoUserName: os.Getenv(http.ENV_REPO_OWNER_NAME),
-			RepoName:     os.Getenv(http.ENV_REPO_NAME),
+			PusherID:     os.Getenv(models.ENV_AUTH_USER_ID), //com.StrTo(os.Getenv(models.ENV_AUTH_USER_ID)).MustInt64(),
+			PusherName:   os.Getenv(models.ENV_AUTH_USER_NAME),
+			RepoUserName: os.Getenv(models.ENV_REPO_OWNER_NAME),
+			RepoName:     os.Getenv(models.ENV_REPO_NAME),
 		}
 		if err := models.PushUpdate(options); err != nil {
 			log.Error(2, "PushUpdate: %v", err)
