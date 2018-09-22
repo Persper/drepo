@@ -12,6 +12,9 @@ package models
 import (
 	"bytes"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	"image/png"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -26,6 +29,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 	"github.com/mcuadros/go-version"
+	"github.com/nfnt/resize"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
@@ -33,12 +37,16 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/avatar"
 	"github.com/gogs/gogs/pkg/bindata"
 	"github.com/gogs/gogs/pkg/markup"
 	"github.com/gogs/gogs/pkg/process"
 	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/sync"
 )
+
+// REPO_AVATAR_URL_PREFIX is used to identify a URL is to access repository avatar.
+const REPO_AVATAR_URL_PREFIX = "repo-avatars"
 
 var repoWorkingPool = sync.NewExclusivePool()
 
@@ -147,36 +155,37 @@ func NewRepoContext() {
 
 // Repository contains information of a repository.
 type Repository struct {
-	ID            string `xorm:"pk"`
-	OwnerID       string `xorm:"UNIQUE(s)"`
-	Owner         *User  `xorm:"-"`
-	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name          string `xorm:"INDEX NOT NULL"`
-	Description   string
-	Website       string
-	DefaultBranch string
-	Size          int64 `xorm:"NOT NULL DEFAULT 0"`
-	IPFSHash      string
+	ID              string `xorm:"pk"`
+	OwnerID         string `xorm:"UNIQUE(s)"`
+	Owner           *User  `xorm:"-" json:"-"`
+	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name            string `xorm:"INDEX NOT NULL"`
+	Description     string `xorm:"VARCHAR(512)"`
+	Website         string
+	DefaultBranch   string
+	Size            int64 `xorm:"NOT NULL DEFAULT 0"`
+	IPFSHash        string
+	UseCustomAvatar bool
 
 	NumWatches          int
 	NumStars            int
 	NumForks            int
 	NumIssues           int
 	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-"`
+	NumOpenIssues       int `xorm:"-" json:"-"`
 	NumPulls            int
 	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-"`
+	NumOpenPulls        int `xorm:"-" json:"-"`
 	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
 	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
-	NumOpenMilestones   int `xorm:"-"`
-	NumTags             int `xorm:"-"`
+	NumOpenMilestones   int `xorm:"-" json:"-"`
+	NumTags             int `xorm:"-" json:"-"`
 
 	IsPrivate bool
 	IsBare    bool
 
 	IsMirror bool
-	*Mirror  `xorm:"-"`
+	*Mirror  `xorm:"-" json:"-"`
 
 	// Advanced settings
 	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
@@ -189,18 +198,18 @@ type Repository struct {
 	ExternalTrackerURL    string
 	ExternalTrackerFormat string
 	ExternalTrackerStyle  string
-	ExternalMetas         map[string]string `xorm:"-"`
+	ExternalMetas         map[string]string `xorm:"-" json:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
 	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false"`
 	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
 	ForkID   string
-	BaseRepo *Repository `xorm:"-"`
+	BaseRepo *Repository `xorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
@@ -291,6 +300,65 @@ func (repo *Repository) HTMLURL() string {
 	return setting.AppURL + repo.FullName()
 }
 
+// CustomAvatarPath returns repository custom avatar file path.
+func (repo *Repository) CustomAvatarPath() string {
+	return filepath.Join(setting.RepositoryAvatarUploadPath, com.ToStr(repo.ID))
+}
+
+// RelAvatarLink returns relative avatar link to the site domain,
+// which includes app sub-url as prefix.
+// Since Gravatar support not needed here - just check for image path.
+func (repo *Repository) RelAvatarLink() string {
+	defaultImgUrl := ""
+	if !com.IsExist(repo.CustomAvatarPath()) {
+		return defaultImgUrl
+	}
+	return fmt.Sprintf("%s/%s/%d", setting.AppSubURL, REPO_AVATAR_URL_PREFIX, repo.ID)
+}
+
+// AvatarLink returns repository avatar absolute link.
+func (repo *Repository) AvatarLink() string {
+	link := repo.RelAvatarLink()
+	if link[0] == '/' && link[1] != '/' {
+		return setting.AppURL + strings.TrimPrefix(link, setting.AppSubURL)[1:]
+	}
+	return link
+}
+
+// UploadAvatar saves custom avatar for repository.
+// FIXME: split uploads to different subdirs in case we have massive number of repositories.
+func (repo *Repository) UploadAvatar(data []byte) error {
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("decode image: %v", err)
+	}
+
+	os.MkdirAll(setting.RepositoryAvatarUploadPath, os.ModePerm)
+	fw, err := os.Create(repo.CustomAvatarPath())
+	if err != nil {
+		return fmt.Errorf("create custom avatar directory: %v", err)
+	}
+	defer fw.Close()
+
+	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
+	if err = png.Encode(fw, m); err != nil {
+		return fmt.Errorf("encode image: %v", err)
+	}
+
+	return nil
+}
+
+// DeleteAvatar deletes the repository custom avatar.
+func (repo *Repository) DeleteAvatar() error {
+	log.Trace("DeleteAvatar [%d]: %s", repo.ID, repo.CustomAvatarPath())
+	if err := os.Remove(repo.CustomAvatarPath()); err != nil {
+		return err
+	}
+
+	repo.UseCustomAvatar = false
+	return UpdateRepository(repo, false)
+}
+
 // This method assumes following fields have been assigned with valid values:
 // Required - BaseRepo (if fork)
 // Arguments that are allowed to be nil: permission
@@ -319,6 +387,8 @@ func (repo *Repository) APIFormat(permission *api.Permission, user ...*User) *ap
 		Created:       repo.Created,
 		Updated:       repo.Updated,
 		Permissions:   permission,
+		// Reserved for go-gogs-client change
+		//		AvatarUrl:     repo.AvatarLink(),
 	}
 	if repo.IsFork {
 		p := &api.Permission{Pull: true}
@@ -778,7 +848,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 			RepoID:      repo.ID,
 			Interval:    setting.Mirror.DefaultInterval,
 			EnablePrune: true,
-			NextUpdate:  time.Now().Add(time.Duration(setting.Mirror.DefaultInterval) * time.Hour),
+			NextSync:    time.Now().Add(time.Duration(setting.Mirror.DefaultInterval) * time.Hour),
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
@@ -1253,7 +1323,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	repo.Owner = newOwner
 
 	// Update repository.
-	if _, err := sess.Id(repo.ID).Update(repo); err != nil {
+	if _, err := sess.ID(repo.ID).Update(repo); err != nil {
 		return fmt.Errorf("update owner: %v", err)
 	}
 
@@ -1285,7 +1355,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			}
 
 			t.NumRepos--
-			if _, err := sess.Id(t.ID).AllCols().Update(t); err != nil {
+			if _, err := sess.ID(t.ID).AllCols().Update(t); err != nil {
 				return fmt.Errorf("decrease team repository count '%d': %v", t.ID, err)
 			}
 		}
@@ -1391,14 +1461,14 @@ func GetRepositoriesByForkID(forkID string) ([]*Repository, error) {
 func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
-	if len(repo.Description) > 255 {
-		repo.Description = repo.Description[:255]
+	if len(repo.Description) > 512 {
+		repo.Description = repo.Description[:512]
 	}
 	if len(repo.Website) > 255 {
 		repo.Website = repo.Website[:255]
 	}
 
-	if _, err = e.Id(repo.ID).AllCols().Update(repo); err != nil {
+	if _, err = e.ID(repo.ID).AllCols().Update(repo); err != nil {
 		return fmt.Errorf("update: %v", err)
 	}
 
@@ -1512,6 +1582,8 @@ func DeleteRepository(uid string, repoID string) error {
 		&PullRequest{BaseRepoID: repoID},
 		&ProtectBranch{RepoID: repoID},
 		&ProtectBranchWhitelist{RepoID: repoID},
+		&Webhook{RepoID: repoID},
+		&HookTask{RepoID: repoID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %v", err)
 	}
@@ -1612,7 +1684,7 @@ func GetRepositoryByName(ownerID string, name string) (*Repository, error) {
 
 func getRepositoryByID(e Engine, id string) (*Repository, error) {
 	repo := new(Repository)
-	has, err := e.Id(id).Get(repo)
+	has, err := e.ID(id).Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -1711,11 +1783,11 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID != "" {
 		sess.Join("LEFT", "access", "access.repo_id = repo.id").
-			Where("(repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ?)", opts.UserID, opts.UserID, false)
+			Where("repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ? OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", opts.UserID, opts.UserID, false, true, true, true)
 	} else {
 		// Only return public repositories if opts.Private is not set
 		if !opts.Private {
-			sess.And("repo.is_private = ?", false)
+			sess.And("repo.is_private = ? OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", false, true, true, true)
 		}
 	}
 	if len(opts.Keyword) > 0 {
@@ -2336,6 +2408,10 @@ func HasForkedRepo(ownerID string, repoID string) (*Repository, bool, error) {
 
 // ForkRepository creates a fork of target repository under another user domain.
 func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+	if !owner.CanCreateRepo() {
+		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+	}
+
 	repo := &Repository{
 		OwnerID:       owner.ID,
 		Owner:         owner,

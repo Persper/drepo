@@ -78,10 +78,10 @@ func AutoLogin(c *context.Context) (bool, error) {
 }
 
 // isValidRedirect returns false if the URL does not redirect to same site.
-// False: //url, http://url
+// False: //url, http://url, /\url
 // True: /url
 func isValidRedirect(url string) bool {
-	return len(url) >= 2 && url[0] == '/' && url[1] != '/'
+	return len(url) >= 2 && url[0] == '/' && url[1] != '/' && url[1] != '\\'
 }
 
 func Login(c *context.Context) {
@@ -118,7 +118,13 @@ func Login(c *context.Context) {
 		return
 	}
 	c.Data["LoginSources"] = loginSources
-
+	for i := range loginSources {
+		if loginSources[i].IsDefault {
+			c.Data["DefaultLoginSource"] = loginSources[i]
+			c.Data["login_source"] = loginSources[i].ID
+			break
+		}
+	}
 	c.Success(LOGIN)
 }
 
@@ -187,12 +193,21 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		default:
 			c.ServerError("UserLogin", err)
 		}
+
 		if !findUser {
 			return
 		} else {
 			// refind the user
 			u, _ = models.UserLoginUportId(f.UportId, f.LoginSource)
 		}
+
+		/*for i := range loginSources {
+			if loginSources[i].IsDefault {
+				c.Data["DefaultLoginSource"] = loginSources[i]
+				break
+			}
+		}
+		return*/
 	}
 
 	if !u.IsEnabledTwoFactor() {

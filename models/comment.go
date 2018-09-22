@@ -52,26 +52,26 @@ type Comment struct {
 	ID              int64
 	Type            CommentType
 	PosterID        string
-	Poster          *User  `xorm:"-"`
+	Poster          *User  `xorm:"-" json:"-"`
 	IssueID         int64  `xorm:"INDEX"`
-	Issue           *Issue `xorm:"-"`
+	Issue           *Issue `xorm:"-" json:"-"`
 	CommitID        int64
 	Line            int64
 	Content         string `xorm:"TEXT"`
-	RenderedContent string `xorm:"-"`
+	RenderedContent string `xorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 
 	// Reference issue in commit message
 	CommitSHA string `xorm:"VARCHAR(40)"`
 
-	Attachments []*Attachment `xorm:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-"`
 
 	// For view issue page.
-	ShowTag CommentTag `xorm:"-"`
+	ShowTag CommentTag `xorm:"-" json:"-"`
 }
 
 func (c *Comment) BeforeInsert() {
@@ -130,14 +130,6 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 
 func (c *Comment) LoadAttributes() error {
 	return c.loadAttributes(x)
-}
-
-func (c *Comment) AfterDelete() {
-	_, err := DeleteAttachmentsByComment(c.ID, true)
-
-	if err != nil {
-		log.Info("Could not delete files for comment %d on issue #%d: %s", c.ID, c.IssueID, err)
-	}
 }
 
 func (c *Comment) HTMLURL() string {
@@ -508,7 +500,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(comment.ID).Delete(new(Comment)); err != nil {
+	if _, err = sess.ID(comment.ID).Delete(new(Comment)); err != nil {
 		return err
 	}
 
@@ -519,7 +511,12 @@ func DeleteCommentByID(doer *User, id int64) error {
 	}
 
 	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
+		return fmt.Errorf("commit: %v", err)
+	}
+
+	_, err = DeleteAttachmentsByComment(comment.ID, true)
+	if err != nil {
+		log.Error(2, "Failed to delete attachments by comment[%d]: %v", comment.ID, err)
 	}
 
 	if err = comment.Issue.LoadAttributes(); err != nil {

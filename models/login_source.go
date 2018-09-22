@@ -11,7 +11,6 @@ package models
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"net/smtp"
 	"net/textproto"
@@ -25,6 +24,7 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
@@ -71,11 +71,11 @@ type LDAPConfig struct {
 }
 
 func (cfg *LDAPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg)
+	return jsoniter.Unmarshal(bs, &cfg)
 }
 
 func (cfg *LDAPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
@@ -92,11 +92,11 @@ type SMTPConfig struct {
 }
 
 func (cfg *SMTPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, cfg)
+	return jsoniter.Unmarshal(bs, cfg)
 }
 
 func (cfg *SMTPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 type PAMConfig struct {
@@ -104,11 +104,11 @@ type PAMConfig struct {
 }
 
 func (cfg *PAMConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg)
+	return jsoniter.Unmarshal(bs, &cfg)
 }
 
 func (cfg *PAMConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 // AuthSourceFile contains information of an authentication source file.
@@ -138,14 +138,15 @@ type LoginSource struct {
 	Type      LoginType
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
+	IsDefault bool            `xorm:"DEFAULT false"`
 	Cfg       core.Conversion `xorm:"TEXT"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 
-	LocalFile *AuthSourceFile `xorm:"-"`
+	LocalFile *AuthSourceFile `xorm:"-" json:"-"`
 }
 
 func (s *LoginSource) BeforeInsert() {
@@ -262,7 +263,12 @@ func CreateLoginSource(source *LoginSource) error {
 	}
 
 	_, err = x.Insert(source)
-	return err
+	if err != nil {
+		return err
+	} else if source.IsDefault {
+		return ResetNonDefaultLoginSources(source)
+	}
+	return nil
 }
 
 // LoginSources returns all login sources defined.
@@ -296,23 +302,48 @@ func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	return source, nil
 }
 
+// ResetNonDefaultLoginSources clean other default source flag
+func ResetNonDefaultLoginSources(source *LoginSource) error {
+	// update changes to DB
+	if _, err := x.NotIn("id", []int64{source.ID}).Cols("is_default").Update(&LoginSource{IsDefault: false}); err != nil {
+		return err
+	}
+	// write changes to local authentications
+	for i := range localLoginSources.sources {
+		if localLoginSources.sources[i].LocalFile != nil && localLoginSources.sources[i].ID != source.ID {
+			localLoginSources.sources[i].LocalFile.SetGeneral("is_default", "false")
+			if err := localLoginSources.sources[i].LocalFile.SetConfig(source.Cfg); err != nil {
+				return fmt.Errorf("LocalFile.SetConfig: %v", err)
+			} else if err = localLoginSources.sources[i].LocalFile.Save(); err != nil {
+				return fmt.Errorf("LocalFile.Save: %v", err)
+			}
+		}
+	}
+	// flush memory so that web page can show the same behaviors
+	localLoginSources.UpdateLoginSource(source)
+	return nil
+}
+
 // UpdateLoginSource updates information of login source to database or local file.
 func UpdateLoginSource(source *LoginSource) error {
 	if source.LocalFile == nil {
-		_, err := x.Id(source.ID).AllCols().Update(source)
-		return err
+		if _, err := x.Id(source.ID).AllCols().Update(source); err != nil {
+			return err
+		} else {
+			return ResetNonDefaultLoginSources(source)
+		}
+
 	}
 
 	source.LocalFile.SetGeneral("name", source.Name)
 	source.LocalFile.SetGeneral("is_activated", com.ToStr(source.IsActived))
+	source.LocalFile.SetGeneral("is_default", com.ToStr(source.IsDefault))
 	if err := source.LocalFile.SetConfig(source.Cfg); err != nil {
 		return fmt.Errorf("LocalFile.SetConfig: %v", err)
 	} else if err = source.LocalFile.Save(); err != nil {
 		return fmt.Errorf("LocalFile.Save: %v", err)
 	}
-
-	localLoginSources.UpdateLoginSource(source)
-	return nil
+	return ResetNonDefaultLoginSources(source)
 }
 
 func DeleteSource(source *LoginSource) error {
@@ -366,7 +397,6 @@ func (s *LocalLoginSources) ActivatedList() []*LoginSource {
 		if !s.sources[i].IsActived {
 			continue
 		}
-
 		source := &LoginSource{}
 		*source = *s.sources[i]
 		list = append(list, source)
@@ -399,7 +429,8 @@ func (s *LocalLoginSources) UpdateLoginSource(source *LoginSource) {
 	for i := range s.sources {
 		if s.sources[i].ID == source.ID {
 			*s.sources[i] = *source
-			break
+		} else if source.IsDefault {
+			s.sources[i].IsDefault = false
 		}
 	}
 }
@@ -434,6 +465,7 @@ func LoadAuthSources() {
 			ID:        s.Key("id").MustInt64(),
 			Name:      s.Key("name").String(),
 			IsActived: s.Key("is_activated").MustBool(),
+			IsDefault: s.Key("is_default").MustBool(),
 			LocalFile: &AuthSourceFile{
 				abspath: fpath,
 				file:    authSource,

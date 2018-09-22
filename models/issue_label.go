@@ -60,8 +60,8 @@ type Label struct {
 	Color           string `xorm:"VARCHAR(7)"`
 	NumIssues       int
 	NumClosedIssues int
-	NumOpenIssues   int  `xorm:"-"`
-	IsChecked       bool `xorm:"-"`
+	NumOpenIssues   int  `xorm:"-" json:"-"`
+	IsChecked       bool `xorm:"-" json:"-"`
 }
 
 func (label *Label) APIFormat() *api.Label {
@@ -196,7 +196,7 @@ func GetLabelsByIssueID(issueID int64) ([]*Label, error) {
 }
 
 func updateLabel(e Engine, l *Label) error {
-	_, err := e.Id(l.ID).AllCols().Update(l)
+	_, err := e.ID(l.ID).AllCols().Update(l)
 	return err
 }
 
@@ -221,7 +221,7 @@ func DeleteLabel(repoID string, labelID int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(labelID).Delete(new(Label)); err != nil {
+	if _, err = sess.ID(labelID).Delete(new(Label)); err != nil {
 		return err
 	} else if _, err = sess.Where("label_id = ?", labelID).Delete(new(IssueLabel)); err != nil {
 		return err

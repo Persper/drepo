@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
@@ -32,17 +31,6 @@ import (
 	"github.com/gogs/gogs/pkg/context"
 	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/tool"
-)
-
-const (
-	ENV_AUTH_USER_ID           = "GOGS_AUTH_USER_ID"
-	ENV_AUTH_USER_NAME         = "GOGS_AUTH_USER_NAME"
-	ENV_AUTH_USER_EMAIL        = "GOGS_AUTH_USER_EMAIL"
-	ENV_REPO_OWNER_NAME        = "GOGS_REPO_OWNER_NAME"
-	ENV_REPO_OWNER_SALT_MD5    = "GOGS_REPO_OWNER_SALT_MD5"
-	ENV_REPO_ID                = "GOGS_REPO_ID"
-	ENV_REPO_NAME              = "GOGS_REPO_NAME"
-	ENV_REPO_CUSTOM_HOOKS_PATH = "GOGS_REPO_CUSTOM_HOOKS_PATH"
 )
 
 type HTTPContext struct {
@@ -294,7 +282,7 @@ func serviceRPC(h serviceHandler, service string) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	if service == "receive-pack" {
-		cmd.Env = append(os.Environ(), ComposeHookEnvs(ComposeHookEnvsOptions{
+		cmd.Env = append(os.Environ(), models.ComposeHookEnvs(models.ComposeHookEnvsOptions{
 			AuthUser:  h.authUser,
 			OwnerName: h.ownerName,
 			OwnerSalt: h.ownerSalt,
@@ -308,7 +296,7 @@ func serviceRPC(h serviceHandler, service string) {
 	cmd.Stderr = &stderr
 	cmd.Stdin = reqBody
 	if err = cmd.Run(); err != nil {
-		log.Error(2, "HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr)
+		log.Error(2, "HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

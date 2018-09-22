@@ -70,7 +70,8 @@ var (
 	LocalURL             string
 	OfflineMode          bool
 	DisableRouterLog     bool
-	CertFile, KeyFile    string
+	CertFile             string
+	KeyFile              string
 	TLSMinVersion        string
 	StaticRootPath       string
 	EnableGzip           bool
@@ -187,11 +188,12 @@ var (
 	}
 
 	// Picture settings
-	AvatarUploadPath      string
-	GravatarSource        string
-	DisableGravatar       bool
-	EnableFederatedAvatar bool
-	LibravatarService     *libravatar.Libravatar
+	AvatarUploadPath           string
+	RepositoryAvatarUploadPath string
+	GravatarSource             string
+	DisableGravatar            bool
+	EnableFederatedAvatar      bool
+	LibravatarService          *libravatar.Libravatar
 
 	// Log settings
 	LogRootPath string
@@ -251,7 +253,7 @@ var (
 		MaxGitDiffLines          int
 		MaxGitDiffLineCharacters int
 		MaxGitDiffFiles          int
-		GCArgs                   []string `delim:" "`
+		GCArgs                   []string `ini:"GC_ARGS" delim:" "`
 		Timeout                  struct {
 			Migrate int
 			Mirror  int
@@ -290,6 +292,14 @@ var (
 			NewsFeedPagingNum int
 			CommitsPagingNum  int
 		} `ini:"ui.user"`
+	}
+
+	// Prometheus settings
+	Prometheus struct {
+		Enabled           bool
+		EnableBasicAuth   bool
+		BasicAuthUsername string
+		BasicAuthPassword string
 	}
 
 	// I18n settings
@@ -403,7 +413,9 @@ func NewContext() {
 		log.Fatal(2, "Fail to get work directory: %v", err)
 	}
 
-	Cfg, err = ini.Load(bindata.MustAsset("conf/app.ini"))
+	Cfg, err = ini.LoadSources(ini.LoadOptions{
+		IgnoreInlineComment: true,
+	}, bindata.MustAsset("conf/app.ini"))
 	if err != nil {
 		log.Fatal(2, "Fail to parse 'conf/app.ini': %v", err)
 	}
@@ -608,6 +620,11 @@ func NewContext() {
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
 	}
+	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "repo-avatars"))
+	forcePathSeparator(RepositoryAvatarUploadPath)
+	if !filepath.IsAbs(RepositoryAvatarUploadPath) {
+		RepositoryAvatarUploadPath = path.Join(workDir, RepositoryAvatarUploadPath)
+	}
 	switch source := sec.Key("GRAVATAR_SOURCE").MustString("gravatar"); source {
 	case "duoshuo":
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
@@ -643,27 +660,29 @@ func NewContext() {
 	}
 
 	if err = Cfg.Section("http").MapTo(&HTTP); err != nil {
-		log.Fatal(2, "Fail to map HTTP settings: %v", err)
+		log.Fatal(2, "Failed to map HTTP settings: %v", err)
 	} else if err = Cfg.Section("webhook").MapTo(&Webhook); err != nil {
-		log.Fatal(2, "Fail to map Webhook settings: %v", err)
+		log.Fatal(2, "Failed to map Webhook settings: %v", err)
 	} else if err = Cfg.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
-		log.Fatal(2, "Fail to map Release.Attachment settings: %v", err)
+		log.Fatal(2, "Failed to map Release.Attachment settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
-		log.Fatal(2, "Fail to map Markdown settings: %v", err)
+		log.Fatal(2, "Failed to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("smartypants").MapTo(&Smartypants); err != nil {
-		log.Fatal(2, "Fail to map Smartypants settings: %v", err)
+		log.Fatal(2, "Failed to map Smartypants settings: %v", err)
 	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {
-		log.Fatal(2, "Fail to map Admin settings: %v", err)
+		log.Fatal(2, "Failed to map Admin settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
-		log.Fatal(2, "Fail to map Cron settings: %v", err)
+		log.Fatal(2, "Failed to map Cron settings: %v", err)
 	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
-		log.Fatal(2, "Fail to map Git settings: %v", err)
+		log.Fatal(2, "Failed to map Git settings: %v", err)
 	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
-		log.Fatal(2, "Fail to map Mirror settings: %v", err)
+		log.Fatal(2, "Failed to map Mirror settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
-		log.Fatal(2, "Fail to map API settings: %v", err)
+		log.Fatal(2, "Failed to map API settings: %v", err)
 	} else if err = Cfg.Section("ui").MapTo(&UI); err != nil {
-		log.Fatal(2, "Fail to map UI settings: %v", err)
+		log.Fatal(2, "Failed to map UI settings: %v", err)
+	} else if err = Cfg.Section("prometheus").MapTo(&Prometheus); err != nil {
+		log.Fatal(2, "Failed to map Prometheus settings: %v", err)
 	}
 
 	if Mirror.DefaultInterval <= 0 {

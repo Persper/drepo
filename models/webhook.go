@@ -9,13 +9,13 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	gouuid "github.com/satori/go.uuid"
 	log "gopkg.in/clog.v1"
 
@@ -68,8 +68,8 @@ type HookEvents struct {
 	Fork         bool `json:"fork"`
 	Push         bool `json:"push"`
 	Issues       bool `json:"issues"`
-	IssueComment bool `json:"issue_comment"`
 	PullRequest  bool `json:"pull_request"`
+	IssueComment bool `json:"issue_comment"`
 	Release      bool `json:"release"`
 }
 
@@ -97,18 +97,18 @@ type Webhook struct {
 	OrgID        string
 	URL          string `xorm:"url TEXT"`
 	ContentType  HookContentType
-	Secret       string `xorm:"TEXT"`
-	Events       string `xorm:"TEXT"`
-	*HookEvent   `xorm:"-"`
-	IsSSL        bool `xorm:"is_ssl"`
+	Secret       string     `xorm:"TEXT"`
+	Events       string     `xorm:"TEXT"`
+	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON here, it breaks old backup archive
+	IsSSL        bool       `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
 	LastStatus   HookStatus // Last delivery status
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
@@ -126,7 +126,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "events":
 		w.HookEvent = &HookEvent{}
-		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+		if err = jsoniter.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 			log.Error(3, "Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
@@ -138,7 +138,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 
 func (w *Webhook) GetSlackHook() *SlackMeta {
 	s := &SlackMeta{}
-	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
+	if err := jsoniter.Unmarshal([]byte(w.Meta), s); err != nil {
 		log.Error(2, "GetSlackHook [%d]: %v", w.ID, err)
 	}
 	return s
@@ -151,7 +151,7 @@ func (w *Webhook) History(page int) ([]*HookTask, error) {
 
 // UpdateEvent handles conversion from HookEvent to Events.
 func (w *Webhook) UpdateEvent() error {
-	data, err := json.Marshal(w.HookEvent)
+	data, err := jsoniter.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
 }
@@ -186,16 +186,16 @@ func (w *Webhook) HasIssuesEvent() bool {
 		(w.ChooseEvents && w.HookEvents.Issues)
 }
 
-// HasIssueCommentEvent returns true if hook enabled issue comment event.
-func (w *Webhook) HasIssueCommentEvent() bool {
-	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.IssueComment)
-}
-
 // HasPullRequestEvent returns true if hook enabled pull request event.
 func (w *Webhook) HasPullRequestEvent() bool {
 	return w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.PullRequest)
+}
+
+// HasIssueCommentEvent returns true if hook enabled issue comment event.
+func (w *Webhook) HasIssueCommentEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.IssueComment)
 }
 
 // HasReleaseEvent returns true if hook enabled release event.
@@ -210,15 +210,15 @@ type eventChecker struct {
 }
 
 func (w *Webhook) EventsArray() []string {
-	events := make([]string, 0, 7)
+	events := make([]string, 0, 8)
 	eventCheckers := []eventChecker{
 		{w.HasCreateEvent, HOOK_EVENT_CREATE},
 		{w.HasDeleteEvent, HOOK_EVENT_DELETE},
 		{w.HasForkEvent, HOOK_EVENT_FORK},
 		{w.HasPushEvent, HOOK_EVENT_PUSH},
 		{w.HasIssuesEvent, HOOK_EVENT_ISSUES},
-		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
 		{w.HasPullRequestEvent, HOOK_EVENT_PULL_REQUEST},
+		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
 		{w.HasReleaseEvent, HOOK_EVENT_RELEASE},
 	}
 	for _, c := range eventCheckers {
@@ -392,8 +392,8 @@ const (
 	HOOK_EVENT_FORK          HookEventType = "fork"
 	HOOK_EVENT_PUSH          HookEventType = "push"
 	HOOK_EVENT_ISSUES        HookEventType = "issues"
-	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
 	HOOK_EVENT_PULL_REQUEST  HookEventType = "pull_request"
+	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
 	HOOK_EVENT_RELEASE       HookEventType = "release"
 )
 
@@ -418,21 +418,21 @@ type HookTask struct {
 	Type            HookTaskType
 	URL             string `xorm:"TEXT"`
 	Signature       string `xorm:"TEXT"`
-	api.Payloader   `xorm:"-"`
+	api.Payloader   `xorm:"-" json:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
 	EventType       HookEventType
 	IsSSL           bool
 	IsDelivered     bool
 	Delivered       int64
-	DeliveredString string `xorm:"-"`
+	DeliveredString string `xorm:"-" json:"-"`
 
 	// History info.
 	IsSucceed       bool
 	RequestContent  string        `xorm:"TEXT"`
-	RequestInfo     *HookRequest  `xorm:"-"`
+	RequestInfo     *HookRequest  `xorm:"-" json:"-"`
 	ResponseContent string        `xorm:"TEXT"`
-	ResponseInfo    *HookResponse `xorm:"-"`
+	ResponseInfo    *HookResponse `xorm:"-" json:"-"`
 }
 
 func (t *HookTask) BeforeUpdate() {
@@ -456,7 +456,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.RequestInfo = &HookRequest{}
-		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
+		if err = jsoniter.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
 			log.Error(3, "Unmarshal[%d]: %v", t.ID, err)
 		}
 
@@ -466,14 +466,14 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.ResponseInfo = &HookResponse{}
-		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+		if err = jsoniter.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
 			log.Error(3, "Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
 
 func (t *HookTask) MarshalJSON(v interface{}) string {
-	p, err := json.Marshal(v)
+	p, err := jsoniter.Marshal(v)
 	if err != nil {
 		log.Error(3, "Marshal [%d]: %v", t.ID, err)
 	}
@@ -549,12 +549,12 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			if !w.HasIssuesEvent() {
 				continue
 			}
-		case HOOK_EVENT_ISSUE_COMMENT:
-			if !w.HasIssueCommentEvent() {
-				continue
-			}
 		case HOOK_EVENT_PULL_REQUEST:
 			if !w.HasPullRequestEvent() {
+				continue
+			}
+		case HOOK_EVENT_ISSUE_COMMENT:
+			if !w.HasIssueCommentEvent() {
 				continue
 			}
 		case HOOK_EVENT_RELEASE:
@@ -654,6 +654,8 @@ func (t *HookTask) deliver() {
 
 	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
+		Header("X-Github-Delivery", t.UUID).
+		Header("X-Github-Event", string(t.EventType)).
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).

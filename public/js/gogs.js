@@ -111,7 +111,7 @@ function initCommentForm() {
     // This should be added directly to HTML but somehow just get empty <span> on this page.
     $labelMenu.find('.item:not(.no-select) .octicon:not(.octicon-check)').each(function () {
         $(this).html('&nbsp;');
-    })
+    });
     $labelMenu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked');
@@ -499,6 +499,15 @@ function initRepository() {
     if ($('.repository.compare.pull').length > 0) {
         initFilterSearchDropdown('.choose.branch .dropdown');
     }
+    if ($('.repository.view.pull').length > 0) {
+    	$('.comment.merge.box input[name=merge_style]').change(function () {
+    		if ($(this).val() === 'create_merge_commit') {
+				$('.commit.description.field').show();
+			} else {
+				$('.commit.description.field').hide();
+			}
+		})
+	}
 }
 
 function initWikiForm() {
@@ -1143,7 +1152,7 @@ function initWebhookSettings() {
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
-    
+
     // Set cursor to the end of autofocus input string
     $('input[autofocus]').each(function () {
         $(this).val($(this).val());
@@ -1261,6 +1270,12 @@ $(document).ready(function () {
         $('#' + e.trigger.getAttribute('id')).popup('show');
         e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
     });
+
+    // Autosize
+    if ($('#description.autosize').length > 0) {
+        autosize($('#description'));
+        showMessageMaxLength(512, 'description', 'descLength');
+    }
 
     // AJAX load buttons
     $('.ajax-load-button').click(function () {
@@ -1443,3 +1458,42 @@ $(function () {
     if ($('.user.signin').length > 0) return;
     $('form').areYouSure();
 });
+
+ // getByteLen counts bytes in a string's UTF-8 representation.
+function getByteLen(normalVal) {
+    // Force string type
+    normalVal = String(normalVal);
+
+    var byteLen = 0;
+    for (var i = 0; i < normalVal.length; i++) {
+        var c = normalVal.charCodeAt(i);
+        byteLen += c < (1 <<  7) ? 1 :
+                   c < (1 << 11) ? 2 :
+                   c < (1 << 16) ? 3 :
+                   c < (1 << 21) ? 4 :
+                   c < (1 << 26) ? 5 :
+                   c < (1 << 31) ? 6 : Number.NaN;
+    }
+    return byteLen;
+}
+
+function showMessageMaxLength(maxLen, textElemId, counterId) {
+    var $msg = $('#'+textElemId);
+    $('#'+counterId).html(maxLen - getByteLen($msg.val()));
+
+    var onMessageKey = function (e) {
+        var $msg = $(this);
+        var text = $msg.val();
+        var len = getByteLen(text);
+        var remainder = maxLen - len;
+
+        if (len >= maxLen) {
+            $msg.val($msg.val().substr(0, maxLen));
+            remainder = 0;
+        }
+
+        $('#'+counterId).html(remainder);
+    };
+
+    $msg.keyup(onMessageKey).keydown(onMessageKey);
+}

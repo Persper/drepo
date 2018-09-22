@@ -28,34 +28,34 @@ var (
 type Issue struct {
 	ID              int64
 	RepoID          string      `xorm:"INDEX UNIQUE(repo_index)"`
-	Repo            *Repository `xorm:"-"`
+	Repo            *Repository `xorm:"-" json:"-"`
 	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	PosterID        string
-	Poster          *User    `xorm:"-"`
+	Poster          *User    `xorm:"-" json:"-"`
 	Title           string   `xorm:"name"`
 	Content         string   `xorm:"TEXT"`
-	RenderedContent string   `xorm:"-"`
-	Labels          []*Label `xorm:"-"`
+	RenderedContent string   `xorm:"-" json:"-"`
+	Labels          []*Label `xorm:"-" json:"-"`
 	MilestoneID     int64
-	Milestone       *Milestone `xorm:"-"`
+	Milestone       *Milestone `xorm:"-" json:"-"`
 	Priority        int
 	AssigneeID      string
-	Assignee        *User `xorm:"-"`
+	Assignee        *User `xorm:"-" json:"-"`
 	IsClosed        bool
-	IsRead          bool         `xorm:"-"`
+	IsRead          bool         `xorm:"-" json:"-"`
 	IsPull          bool         // Indicates whether is a pull request or not.
-	PullRequest     *PullRequest `xorm:"-"`
+	PullRequest     *PullRequest `xorm:"-" json:"-"`
 	NumComments     int
 
-	Deadline     time.Time `xorm:"-"`
+	Deadline     time.Time `xorm:"-" json:"-"`
 	DeadlineUnix int64
-	Created      time.Time `xorm:"-"`
+	Created      time.Time `xorm:"-" json:"-"`
 	CreatedUnix  int64
-	Updated      time.Time `xorm:"-"`
+	Updated      time.Time `xorm:"-" json:"-"`
 	UpdatedUnix  int64
 
-	Attachments []*Attachment `xorm:"-"`
-	Comments    []*Comment    `xorm:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-"`
+	Comments    []*Comment    `xorm:"-" json:"-"`
 }
 
 func (issue *Issue) BeforeInsert() {
@@ -402,7 +402,7 @@ func (i *Issue) ReadBy(uid string) error {
 }
 
 func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
-	_, err := e.Id(issue.ID).Cols(cols...).Update(issue)
+	_, err := e.ID(issue.ID).Cols(cols...).Update(issue)
 	return err
 }
 
@@ -843,7 +843,7 @@ func GetIssueByIndex(repoID string, index int64) (*Issue, error) {
 
 func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	issue := new(Issue)
-	has, err := e.Id(id).Get(issue)
+	has, err := e.ID(id).Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -1354,7 +1354,7 @@ func GetRepoIssueStats(repoID string, userID string, filterMode FilterMode, isPu
 }
 
 func updateIssue(e Engine, issue *Issue) error {
-	_, err := e.Id(issue.ID).AllCols().Update(issue)
+	_, err := e.ID(issue.ID).AllCols().Update(issue)
 	return err
 }
 
@@ -1423,7 +1423,7 @@ func updateIssueUsersByMentions(e Engine, issueID int64, uids []string) error {
 
 		iu.IsMentioned = true
 		if has {
-			_, err = e.Id(iu.ID).AllCols().Update(iu)
+			_, err = e.ID(iu.ID).AllCols().Update(iu)
 		} else {
 			_, err = e.Insert(iu)
 		}

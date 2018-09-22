@@ -52,7 +52,9 @@
 					</div>
 					<div class="inline field {{if .Err_Description}}error{{end}}">
 						<label for="description">{{.i18n.Tr "repo.repo_desc"}}</label>
-						<textarea id="description" name="description">{{.description}}</textarea>
+						<textarea class="autosize" id="description" name="description" rows="3">{{.description}}</textarea>
+						<span class="help">{{.i18n.Tr "repo.repo_description_helper" | Safe}}</span>
+						<span class="help">{{.i18n.Tr "repo.repo_description_length"}}: <span id="descLength"></span></span>
 					</div>
 
 					<div class="ui divider"></div>
@@ -83,7 +85,7 @@
 					</div>
 
 					<div class="inline field">
-						<label>{{.i18n.Tr "repo.readme"}} <a target="_blank" href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-readme-template"><span class="octicon octicon-question"></span></a></label>
+						<label>{{.i18n.Tr "repo.readme"}} <a target="_blank" rel="noopener noreferrer" href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-readme-template"><span class="octicon octicon-question"></span></a></label>
 						<div class="ui selection dropdown">
 							<input type="hidden" name="readme" value="{{.readme}}">
 							<div class="default text">{{.i18n.Tr "repo.readme_helper"}}</div>
@@ -113,4 +115,5 @@
 		</div>
 	</div>
 </div>
+
 {{template "base/footer" .}}

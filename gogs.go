@@ -16,7 +16,7 @@ import (
 	"github.com/gogs/gogs/pkg/setting"
 )
 
-const APP_VER = "0.11.49.0521"
+const APP_VER = "0.11.66.0916"
 
 func init() {
 	setting.AppVer = APP_VER
@@ -37,6 +37,5 @@ func main() {
 		cmd.Backup,
 		cmd.Restore,
 	}
-	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
 }

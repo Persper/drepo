@@ -25,7 +25,7 @@ type TwoFactor struct {
 	ID          int64
 	UserID      string `xorm:"UNIQUE"`
 	Secret      string
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
 }
 

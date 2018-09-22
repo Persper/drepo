@@ -19,7 +19,9 @@
 						</div>
 						<div class="field {{if .Err_Description}}error{{end}}">
 							<label for="description">{{$.i18n.Tr "repo.repo_desc"}}</label>
-							<textarea id="description" name="description" rows="2">{{.Repository.Description}}</textarea>
+							<textarea class="autosize" id="description" name="description" rows="3">{{.Repository.Description}}</textarea>
+							<p class="help">{{.i18n.Tr "repo.settings.description_desc"}}</p>
+							<p class="help">{{.i18n.Tr "repo.settings.description_length"}}: <span id="descLength"></span></p>
 						</div>
 						<div class="field {{if .Err_Website}}error{{end}}">
 							<label for="website">{{.i18n.Tr "repo.settings.site"}}</label>
@@ -38,6 +40,20 @@
 
 						<div class="field">
 							<button class="ui green button">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
+						</div>
+					</form>
+
+					<div class="ui divider"></div>
+
+					<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
+						{{.CSRFTokenHTML}}
+						<div class="inline field">
+							<label for="avatar">{{.i18n.Tr "settings.choose_new_avatar"}}</label>
+							<input name="avatar" type="file" >
+						</div>
+						<div class="field">
+							<button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
+							<a class="ui red button delete-post" data-request-url="{{.Link}}/avatar/delete" data-done-url="{{.Link}}">{{$.i18n.Tr "settings.delete_current_avatar"}}</a>
 						</div>
 					</form>
 				</div>
@@ -79,7 +95,7 @@
 							<input type="hidden" name="action" value="mirror-sync">
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.mirror_last_synced"}}</label>
-								<span>{{.Mirror.Updated}}</span>
+								<span>{{.Mirror.LastSync}}</span>
 							</div>
 							<div class="field">
 								<button class="ui blue button">{{$.i18n.Tr "repo.settings.sync_mirror"}}</button>

@@ -6,12 +6,13 @@ package repo
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
-	log "gopkg.in/clog.v1"
-
+	"github.com/Unknwon/com"
 	"github.com/gogs/git-module"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/models/errors"
@@ -19,10 +20,12 @@ import (
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/mailer"
 	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 const (
 	SETTINGS_OPTIONS          = "repo/settings/options"
+	SETTINGS_REPO_AVATAR      = "repo/settings/avatar"
 	SETTINGS_COLLABORATION    = "repo/settings/collaboration"
 	SETTINGS_BRANCHES         = "repo/settings/branches"
 	SETTINGS_PROTECTED_BRANCH = "repo/settings/protected_branch"
@@ -35,12 +38,14 @@ const (
 func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
+	c.RequireAutosize()
 	c.Success(SETTINGS_OPTIONS)
 }
 
 func SettingsPost(c *context.Context, f form.RepoSetting) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
+	c.RequireAutosize()
 
 	repo := c.Repo.Repository
 
@@ -112,7 +117,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		if f.Interval > 0 {
 			c.Repo.Mirror.EnablePrune = f.EnablePrune
 			c.Repo.Mirror.Interval = f.Interval
-			c.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(f.Interval) * time.Hour)
+			c.Repo.Mirror.NextSync = time.Now().Add(time.Duration(f.Interval) * time.Hour)
 			if err := models.UpdateMirror(c.Repo.Mirror); err != nil {
 				c.ServerError("UpdateMirror", err)
 				return
@@ -291,6 +296,63 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	default:
 		c.NotFound()
 	}
+}
+
+func SettingsAvatar(c *context.Context) {
+	c.Title("settings.avatar")
+	c.PageIs("SettingsAvatar")
+	c.Success(SETTINGS_REPO_AVATAR)
+}
+
+func SettingsAvatarPost(c *context.Context, f form.Avatar) {
+	f.Source = form.AVATAR_LOCAL
+	if err := UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
+		c.Flash.Error(err.Error())
+	} else {
+		c.Flash.Success(c.Tr("settings.update_avatar_success"))
+	}
+	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
+}
+
+func SettingsDeleteAvatar(c *context.Context) {
+	if err := c.Repo.Repository.DeleteAvatar(); err != nil {
+		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
+	}
+	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
+}
+
+// FIXME: limit upload size
+func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repository) error {
+	ctxRepo.UseCustomAvatar = true
+	if f.Avatar != nil {
+		r, err := f.Avatar.Open()
+		if err != nil {
+			return fmt.Errorf("open avatar reader: %v", err)
+		}
+		defer r.Close()
+
+		data, err := ioutil.ReadAll(r)
+		if err != nil {
+			return fmt.Errorf("read avatar content: %v", err)
+		}
+		if !tool.IsImageFile(data) {
+			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
+		}
+		if err = ctxRepo.UploadAvatar(data); err != nil {
+			return fmt.Errorf("upload avatar: %v", err)
+		}
+	} else {
+		// No avatar is uploaded and reset setting back.
+		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
+			ctxRepo.UseCustomAvatar = false
+		}
+	}
+
+	if err := models.UpdateRepository(ctxRepo, false); err != nil {
+		return fmt.Errorf("update repository: %v", err)
+	}
+
+	return nil
 }
 
 func SettingsCollaboration(c *context.Context) {

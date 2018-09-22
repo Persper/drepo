@@ -6,7 +6,6 @@ package template
 
 import (
 	"container/list"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"mime"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/json-iterator/go"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -65,6 +65,7 @@ func NewFuncMap() []template.FuncMap {
 		"Safe":             Safe,
 		"Sanitize":         bluemonday.UGCPolicy().Sanitize,
 		"Str2html":         Str2html,
+		"NewLine2br":       NewLine2br,
 		"TimeSince":        tool.TimeSince,
 		"RawTimeSince":     tool.RawTimeSince,
 		"FileSize":         tool.FileSize,
@@ -128,6 +129,11 @@ func Safe(raw string) template.HTML {
 
 func Str2html(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
+}
+
+// NewLine2br simply replaces "\n" to "<br>".
+func NewLine2br(raw string) string {
+	return strings.Replace(raw, "\n", "<br>", -1)
 }
 
 func List(l *list.List) chan interface{} {
@@ -266,6 +272,8 @@ func ActionIcon(opType int) string {
 		return "alert"
 	case 19: // Fork a repository
 		return "repo-forked"
+	case 20, 21, 22: // Mirror sync
+		return "repo-clone"
 	default:
 		return "invalid type"
 	}
@@ -273,8 +281,8 @@ func ActionIcon(opType int) string {
 
 func ActionContent2Commits(act Actioner) *models.PushCommits {
 	push := models.NewPushCommits()
-	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
-		log.Error(4, "json.Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
+	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
+		log.Error(4, "Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
 	"github.com/mcuadros/go-version"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
@@ -64,7 +65,7 @@ func checkVersion() {
 	if err != nil {
 		log.Fatal(2, "Fail to read 'templates/.VERSION': %v", err)
 	}
-	tplVer := string(data)
+	tplVer := strings.TrimSpace(string(data))
 	if tplVer != setting.AppVer {
 		if version.Compare(tplVer, setting.AppVer, ">") {
 			log.Fatal(2, "Binary version is lower than template file version, did you forget to recompile Gogs?")
@@ -96,7 +97,14 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
-			Prefix:      "avatars",
+			Prefix:      models.USER_AVATAR_URL_PREFIX,
+			SkipLogging: setting.DisableRouterLog,
+		},
+	))
+	m.Use(macaron.Static(
+		setting.RepositoryAvatarUploadPath,
+		macaron.StaticOptions{
+			Prefix:      models.REPO_AVATAR_URL_PREFIX,
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
@@ -255,11 +263,11 @@ func runWeb(c *cli.Context) error {
 	})
 	// ***** END: User *****
 
-	adminReq := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
+	reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
-		m.Get("", adminReq, admin.Dashboard)
+		m.Get("", admin.Dashboard)
 		m.Get("/config", admin.Config)
 		m.Post("/config/test_mail", admin.SendTestMail)
 		m.Get("/monitor", admin.Monitor)
@@ -293,7 +301,7 @@ func runWeb(c *cli.Context) error {
 			m.Post("/delete", admin.DeleteNotices)
 			m.Get("/empty", admin.EmptyNotices)
 		})
-	}, adminReq)
+	}, reqAdmin)
 	// ***** END: Admin *****
 
 	m.Group("", func() {
@@ -424,6 +432,9 @@ func runWeb(c *cli.Context) error {
 		m.Group("/settings", func() {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
+			m.Combo("/avatar").Get(repo.SettingsAvatar).
+				Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)
+			m.Post("/avatar/delete", repo.SettingsDeleteAvatar)
 			m.Group("/collaboration", func() {
 				m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
 				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
@@ -656,6 +667,18 @@ func runWeb(c *cli.Context) error {
 	m.Group("/api", func() {
 		apiv1.RegisterRoutes(m)
 	}, ignSignIn)
+
+	m.Group("/-", func() {
+		if setting.Prometheus.Enabled {
+			m.Get("/metrics", func(c *context.Context) {
+				if !setting.Prometheus.EnableBasicAuth {
+					return
+				}
+
+				c.RequireBasicAuth(setting.Prometheus.BasicAuthUsername, setting.Prometheus.BasicAuthPassword)
+			}, promhttp.Handler())
+		}
+	})
 
 	// robots.txt
 	m.Get("/robots.txt", func(c *context.Context) {
